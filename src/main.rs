@@ -75,22 +75,8 @@ fn main() -> Result<(), Error> {
                 world.box_vel.y = 0.0;
             }
 
-            if input.key_held(VirtualKeyCode::W) {
-                world.box_vel.y = -1.0;
-            }
-            if input.key_held(VirtualKeyCode::S) {
-                world.box_vel.y = 1.0;
-            }
-
-            if input.key_held(VirtualKeyCode::A) {
-                world.box_vel.x = -1.0;
-            }
-            if input.key_held(VirtualKeyCode::D) {
-                world.box_vel.x = 1.0;
-            }
-
             // Update internal state and request a redraw
-            world.update();
+            world.update(&mut input);
             window.request_redraw();
         }
 
@@ -144,7 +130,25 @@ impl World {
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
-    fn update(&mut self) {
+    fn update(&mut self, input: &mut WinitInputHelper) {
+        // Friction
+        self.box_vel *= 0.8;
+
+        // Player Input
+        if input.key_held(VirtualKeyCode::W) {
+            self.box_vel.y += -1.0;
+        }
+        if input.key_held(VirtualKeyCode::S) {
+            self.box_vel.y += 1.0;
+        }
+        if input.key_held(VirtualKeyCode::A) {
+            self.box_vel.x += -1.0;
+        }
+        if input.key_held(VirtualKeyCode::D) {
+            self.box_vel.x += 1.0;
+        }
+
+        // Bound check
         if self.box_pos.x <= 0.0 || self.box_pos.x + BOX_SIZE as f32 > WIDTH as f32 {
             self.box_vel.x *= -1.0;
         }
@@ -163,20 +167,6 @@ impl World {
 
         renderer.draw_square(
             self.box_pos,
-            Vec2 {
-                x: BOX_SIZE as f32,
-                y: BOX_SIZE as f32,
-            },
-        );
-        renderer.draw_square(
-            self.box_pos - self.box_vel * BOX_SIZE as f32,
-            Vec2 {
-                x: BOX_SIZE as f32,
-                y: BOX_SIZE as f32,
-            },
-        );
-        renderer.draw_square(
-            self.box_pos - self.box_vel * 2.0 * BOX_SIZE as f32,
             Vec2 {
                 x: BOX_SIZE as f32,
                 y: BOX_SIZE as f32,
