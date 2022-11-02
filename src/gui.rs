@@ -142,8 +142,7 @@ impl Gui {
                         self.window_open = true;
                         ui.close_menu();
                     }
-                    if ui.button("Pause").clicked()
-                    {
+                    if ui.button("Pause").clicked() {
                         println!("Hello World!");
                     }
                 })

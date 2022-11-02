@@ -1,6 +1,6 @@
 use crate::gui::Framework;
-use crate::draw_utils::*;
-use draw_utils::draw_square;
+use crate::renderer::*;
+use glam::Vec2;
 use log::error;
 use pixels::{Error, Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
@@ -8,10 +8,9 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use glam::Vec2;
 
 mod gui;
-mod draw_utils;
+mod renderer;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
@@ -37,20 +36,19 @@ fn main() -> Result<(), Error> {
             .unwrap()
     };
 
-    let (mut pixels, mut framework) = {
+    let mut renderer = Renderer::new(&window);
+
+    let mut framework = {
         let window_size = window.inner_size();
         let scale_factor = window.scale_factor() as f32;
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        let pixels = Pixels::new(WIDTH, HEIGHT, surface_texture)?;
         let framework = Framework::new(
             &event_loop,
             window_size.width,
             window_size.height,
             scale_factor,
-            &pixels,
+            &renderer.pixels,
         );
-
-        (pixels, framework)
+        framework
     };
     let mut world = World::new();
 
@@ -70,31 +68,26 @@ fn main() -> Result<(), Error> {
 
             // Resize the window
             if let Some(size) = input.window_resized() {
-                pixels.resize_surface(size.width, size.height);
+                renderer.pixels.resize_surface(size.width, size.height);
                 framework.resize(size.width, size.height);
             }
 
-            if input.key_pressed(VirtualKeyCode::R)
-            {
+            if input.key_pressed(VirtualKeyCode::R) {
                 world.box_vel.x = 0.0;
                 world.box_vel.y = 0.0;
             }
 
-            if input.key_held(VirtualKeyCode::W)
-            {
+            if input.key_held(VirtualKeyCode::W) {
                 world.box_vel.y = -1.0;
             }
-            if input.key_held(VirtualKeyCode::S)
-            {
+            if input.key_held(VirtualKeyCode::S) {
                 world.box_vel.y = 1.0;
             }
 
-            if input.key_held(VirtualKeyCode::A)
-            {
+            if input.key_held(VirtualKeyCode::A) {
                 world.box_vel.x = -1.0;
             }
-            if input.key_held(VirtualKeyCode::D)
-            {
+            if input.key_held(VirtualKeyCode::D) {
                 world.box_vel.x = 1.0;
             }
 
@@ -111,13 +104,13 @@ fn main() -> Result<(), Error> {
             // Draw the current frame
             Event::RedrawRequested(_) => {
                 // Draw the world
-                world.draw(pixels.get_frame_mut());
+                world.draw(&mut renderer);
 
                 // Prepare egui
                 framework.prepare(&window);
 
                 // Render everything together
-                let render_result = pixels.render_with(|encoder, render_target, context| {
+                let render_result = renderer.pixels.render_with(|encoder, render_target, context| {
                     // Render the world texture
                     context.scaling_renderer.render(encoder, render_target);
 
@@ -164,13 +157,29 @@ impl World {
     /// Draw the `World` state to the frame buffer.
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
-    fn draw(&self, frame: &mut [u8]) {
+    fn draw(&self, renderer: &mut Renderer) {
+        renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
 
-        clear_frame([0x48, 0xb2, 0xe8, 0xff], frame);
-
-        draw_square(self.box_pos, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
-        draw_square(self.box_pos - self.box_vel * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
-        draw_square(self.box_pos - self.box_vel * 2.0 * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
-        
+        renderer.draw_square(
+            self.box_pos,
+            Vec2 {
+                x: BOX_SIZE as f32,
+                y: BOX_SIZE as f32,
+            },
+        );
+        renderer.draw_square(
+            self.box_pos - self.box_vel * BOX_SIZE as f32,
+            Vec2 {
+                x: BOX_SIZE as f32,
+                y: BOX_SIZE as f32,
+            },
+        );
+        renderer.draw_square(
+            self.box_pos - self.box_vel * 2.0 * BOX_SIZE as f32,
+            Vec2 {
+                x: BOX_SIZE as f32,
+                y: BOX_SIZE as f32,
+            },
+        );
     }
 }
