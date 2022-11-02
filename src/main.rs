@@ -2,7 +2,7 @@ use crate::gui::Framework;
 use crate::renderer::*;
 use glam::Vec2;
 use log::error;
-use pixels::{Error, Pixels, SurfaceTexture};
+use pixels::Error;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -38,18 +38,16 @@ fn main() -> Result<(), Error> {
 
     let mut renderer = Renderer::new(&window);
 
-    let mut framework = {
-        let window_size = window.inner_size();
-        let scale_factor = window.scale_factor() as f32;
-        let framework = Framework::new(
-            &event_loop,
-            window_size.width,
-            window_size.height,
-            scale_factor,
-            &renderer.pixels,
-        );
-        framework
-    };
+    let window_size = window.inner_size();
+    let scale_factor = window.scale_factor() as f32;
+    let mut framework = Framework::new(
+        &event_loop,
+        window_size.width,
+        window_size.height,
+        scale_factor,
+        &renderer.pixels,
+    );
+
     let mut world = World::new();
 
     event_loop.run(move |event, _, control_flow| {
@@ -110,15 +108,18 @@ fn main() -> Result<(), Error> {
                 framework.prepare(&window);
 
                 // Render everything together
-                let render_result = renderer.pixels.render_with(|encoder, render_target, context| {
-                    // Render the world texture
-                    context.scaling_renderer.render(encoder, render_target);
+                let render_result =
+                    renderer
+                        .pixels
+                        .render_with(|encoder, render_target, context| {
+                            // Render the world texture
+                            context.scaling_renderer.render(encoder, render_target);
 
-                    // Render egui
-                    framework.render(encoder, render_target, context);
+                            // Render egui
+                            framework.render(encoder, render_target, context);
 
-                    Ok(())
-                });
+                            Ok(())
+                        });
 
                 // Basic error handling
                 if render_result
