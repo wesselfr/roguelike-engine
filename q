@@ -1,0 +1,50 @@
+[1mdiff --git a/src/main.rs b/src/main.rs[m
+[1mindex f8c16af..6147423 100644[m
+[1m--- a/src/main.rs[m
+[1m+++ b/src/main.rs[m
+[36m@@ -1,4 +1,6 @@[m
+ use crate::gui::Framework;[m
+[32m+[m[32muse crate::draw_utils::*;[m
+[32m+[m[32muse draw_utils::draw_square;[m
+ use log::error;[m
+ use pixels::{Error, Pixels, SurfaceTexture};[m
+ use winit::dpi::LogicalSize;[m
+[36m@@ -9,6 +11,7 @@[m [muse winit_input_helper::WinitInputHelper;[m
+ use glam::Vec2;[m
+ [m
+ mod gui;[m
+[32m+[m[32mmod draw_utils;[m
+ [m
+ const WIDTH: u32 = 640;[m
+ const HEIGHT: u32 = 480;[m
+[36m@@ -162,22 +165,12 @@[m [mimpl World {[m
+     ///[m
+     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`[m
+     fn draw(&self, frame: &mut [u8]) {[m
+[31m-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {[m
+[31m-            let x = (i % WIDTH as usize) as i16;[m
+[31m-            let y = (i / WIDTH as usize) as i16;[m
+[31m-[m
+[31m-            let inside_the_box = x >= self.box_pos.x as i16[m
+[31m-                && x < self.box_pos.x as i16 + BOX_SIZE[m
+[31m-                && y >= self.box_pos.y as i16[m
+[31m-                && y < self.box_pos.y as i16 + BOX_SIZE;[m
+[31m-[m
+[31m-            let rgba = if inside_the_box {[m
+[31m-                [0x5e, 0x48, 0xe8, 0xff][m
+[31m-            } else {[m
+[31m-                [0x48, 0xb2, 0xe8, 0xff][m
+[31m-            };[m
+[31m-[m
+[31m-            pixel.copy_from_slice(&rgba);[m
+[31m-        }[m
+[32m+[m
+[32m+[m[32m        clear_frame([0x48, 0xb2, 0xe8, 0xff], frame);[m
+[32m+[m
+[32m+[m[32m        draw_square(self.box_pos, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);[m
+[32m+[m[32m        draw_square(self.box_pos - self.box_vel * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);[m
+[32m+[m[32m        draw_square(self.box_pos - self.box_vel * 2.0 * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);[m
+[32m+[m[41m        [m
+     }[m
+ }[m
+\ No newline at end of file[m

@@ -1,4 +1,6 @@
 use crate::gui::Framework;
+use crate::draw_utils::*;
+use draw_utils::draw_square;
 use log::error;
 use pixels::{Error, Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
@@ -9,6 +11,7 @@ use winit_input_helper::WinitInputHelper;
 use glam::Vec2;
 
 mod gui;
+mod draw_utils;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
@@ -162,22 +165,12 @@ impl World {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, frame: &mut [u8]) {
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            let x = (i % WIDTH as usize) as i16;
-            let y = (i / WIDTH as usize) as i16;
 
-            let inside_the_box = x >= self.box_pos.x as i16
-                && x < self.box_pos.x as i16 + BOX_SIZE
-                && y >= self.box_pos.y as i16
-                && y < self.box_pos.y as i16 + BOX_SIZE;
+        clear_frame([0x48, 0xb2, 0xe8, 0xff], frame);
 
-            let rgba = if inside_the_box {
-                [0x5e, 0x48, 0xe8, 0xff]
-            } else {
-                [0x48, 0xb2, 0xe8, 0xff]
-            };
-
-            pixel.copy_from_slice(&rgba);
-        }
+        draw_square(self.box_pos, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
+        draw_square(self.box_pos - self.box_vel * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
+        draw_square(self.box_pos - self.box_vel * 2.0 * BOX_SIZE as f32, Vec2 { x: BOX_SIZE as f32, y: BOX_SIZE as f32 }, frame, WIDTH);
+        
     }
 }
