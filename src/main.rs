@@ -1,5 +1,6 @@
 use crate::gui::Framework;
 use crate::renderer::*;
+use crate::easing::*;
 use glam::Vec2;
 use image::DynamicImage;
 use log::error;
@@ -12,6 +13,7 @@ use winit_input_helper::WinitInputHelper;
 
 mod gui;
 mod renderer;
+mod easing;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
