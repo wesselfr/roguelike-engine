@@ -10,6 +10,8 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
+use core::time;
+use std::time::{Duration, Instant};
 
 mod easing;
 mod gui;
@@ -22,6 +24,9 @@ const BOX_SIZE: i16 = 64;
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
     player: Entity,
+    slime: Entity,
+    now: Instant,
+    time_passed: f32, 
 }
 
 struct Entity {
@@ -35,8 +40,8 @@ impl Entity {
         Self { pos, vel, sprite }
     }
 
-    fn update(&mut self) {
-        self.pos += self.vel;
+    fn update(&mut self, dt: f32) {
+        self.pos += self.vel * dt;
     }
 
     fn draw(&self, renderer: &mut Renderer) {
@@ -146,6 +151,7 @@ impl World {
     /// Create a new `World` instance that can draw a moving box.
     fn new() -> Self {
         Self {
+            // Player entity
             player: Entity::new(
                 Vec2 {
                     x: 24.0,
@@ -154,20 +160,35 @@ impl World {
                 Vec2::ZERO,
                 image::open("src/assets/weapon_sword_1.png").unwrap(),
             ),
+            // Slime entity
+            slime: Entity::new(
+                Vec2 {
+                    x: WIDTH as f32,
+                    y: HEIGHT as f32 / 2.0,
+                },
+                Vec2 { x: -1.0, y: 0.0 },
+                image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
+            ),
+            now: Instant::now(),
+            time_passed: 0.0,
         }
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
     fn update(&mut self, input: &mut WinitInputHelper) {
+        let dt = self.now.elapsed().as_secs_f32();
+        self.time_passed += dt;
+        self.now = Instant::now();
+
         // Friction
         self.player.vel *= 0.8;
 
         // Player Input
         if input.key_held(VirtualKeyCode::A) {
-            self.player.vel.x += -1.0;
+            self.player.vel.x += -100.0;
         }
         if input.key_held(VirtualKeyCode::D) {
-            self.player.vel.x += 1.0;
+            self.player.vel.x += 100.0;
         }
 
         // Bound check
@@ -178,7 +199,10 @@ impl World {
             self.player.vel.y *= -1.0;
         }
 
-        self.player.update();
+        self.slime.vel.x = -20.0 + (self.time_passed * 0.5).sin() * 40.0;
+
+        self.player.update(dt);
+        self.slime.update(dt);
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -196,5 +220,9 @@ impl World {
         // );
 
         self.player.draw(renderer);
+
+        if self.time_passed as u32 % 4 == 0{
+            self.slime.draw(renderer);
+        }
     }
 }
