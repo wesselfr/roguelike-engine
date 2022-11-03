@@ -1,6 +1,6 @@
+use crate::easing::*;
 use crate::gui::Framework;
 use crate::renderer::*;
-use crate::easing::*;
 use glam::Vec2;
 use image::DynamicImage;
 use log::error;
@@ -11,9 +11,9 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+mod easing;
 mod gui;
 mod renderer;
-mod easing;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
@@ -21,9 +21,27 @@ const BOX_SIZE: i16 = 64;
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
-    box_pos: Vec2,
-    box_vel: Vec2,
-    image: DynamicImage,
+    player: Entity,
+}
+
+struct Entity {
+    pos: Vec2,
+    vel: Vec2,
+    sprite: DynamicImage,
+}
+
+impl Entity {
+    fn new(pos: Vec2, vel: Vec2, sprite: DynamicImage) -> Self {
+        Self { pos, vel, sprite }
+    }
+
+    fn update(&mut self) {
+        self.pos += self.vel;
+    }
+
+    fn draw(&self, renderer: &mut Renderer) {
+        renderer.draw_sprite(self.pos, &self.sprite, 4);
+    }
 }
 
 fn main() -> Result<(), Error> {
@@ -75,8 +93,8 @@ fn main() -> Result<(), Error> {
             }
 
             if input.key_pressed(VirtualKeyCode::R) {
-                world.box_vel.x = 0.0;
-                world.box_vel.y = 0.0;
+                world.player.pos.x = 0.0;
+                world.player.pos.y = 0.0;
             }
 
             // Update internal state and request a redraw
@@ -128,40 +146,39 @@ impl World {
     /// Create a new `World` instance that can draw a moving box.
     fn new() -> Self {
         Self {
-            box_pos: Vec2 { x: 24.0, y: 16.0 },
-            box_vel: Vec2 { x: 1.0, y: 1.0 },
-            image: image::open("src/assets/weapon_sword_1.png").unwrap(),
+            player: Entity::new(
+                Vec2 {
+                    x: 24.0,
+                    y: HEIGHT as f32 / 2.0,
+                },
+                Vec2::ZERO,
+                image::open("src/assets/weapon_sword_1.png").unwrap(),
+            ),
         }
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
     fn update(&mut self, input: &mut WinitInputHelper) {
         // Friction
-        self.box_vel *= 0.8;
+        self.player.vel *= 0.8;
 
         // Player Input
-        if input.key_held(VirtualKeyCode::W) {
-            self.box_vel.y += -1.0;
-        }
-        if input.key_held(VirtualKeyCode::S) {
-            self.box_vel.y += 1.0;
-        }
         if input.key_held(VirtualKeyCode::A) {
-            self.box_vel.x += -1.0;
+            self.player.vel.x += -1.0;
         }
         if input.key_held(VirtualKeyCode::D) {
-            self.box_vel.x += 1.0;
+            self.player.vel.x += 1.0;
         }
 
         // Bound check
-        if self.box_pos.x <= 0.0 || self.box_pos.x as u32 + BOX_SIZE as u32  > WIDTH {
-            self.box_vel.x *= -1.0;
+        if self.player.pos.x <= 0.0 || self.player.pos.x as u32 + BOX_SIZE as u32 > WIDTH {
+            self.player.vel.x *= -1.0;
         }
-        if self.box_pos.y <= 0.0 || self.box_pos.y as u32 + BOX_SIZE as u32 > HEIGHT {
-            self.box_vel.y *= -1.0;
+        if self.player.pos.y <= 0.0 || self.player.pos.y as u32 + BOX_SIZE as u32 > HEIGHT {
+            self.player.vel.y *= -1.0;
         }
 
-        self.box_pos += self.box_vel;
+        self.player.update();
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -178,6 +195,6 @@ impl World {
         //     },
         // );
 
-        renderer.draw_sprite(self.box_pos, &self.image, 4)
+        self.player.draw(renderer);
     }
 }

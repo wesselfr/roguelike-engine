@@ -55,7 +55,7 @@ impl Renderer {
             //pixel.0;
 
             if x > 0 && x < size_x * scale && y > 0 && y < size_y * scale {
-                let data = &image.get_pixel(x /scale, y / scale).0;
+                let data = &image.get_pixel(x / scale, y / scale).0;
                 if data[3] > 0 {
                     pixel.copy_from_slice(data);
                 }
