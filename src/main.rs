@@ -28,20 +28,23 @@ struct World {
     now: Instant,
     time_passed: f32,
     death_time: f32,
-
-    slime_killed: bool,
-    player_killed: bool,
 }
 
 struct Entity {
     pos: Vec2,
     vel: Vec2,
     sprite: DynamicImage,
+    alive: bool,
 }
 
 impl Entity {
     fn new(pos: Vec2, vel: Vec2, sprite: DynamicImage) -> Self {
-        Self { pos, vel, sprite }
+        Self {
+            pos,
+            vel,
+            sprite,
+            alive: true,
+        }
     }
 
     fn update(&mut self, dt: f32) {
@@ -187,16 +190,13 @@ impl World {
             now: Instant::now(),
             time_passed: 0.0,
             death_time: 0.0,
-
-            slime_killed: false,
-            player_killed: false,
         }
     }
 
     fn reset(&mut self) {
         self.death_time = 0.0;
-        self.player_killed = false;
-        self.slime_killed = false;
+        self.player.alive = true;
+        self.slime.alive = true;
         self.player.pos = Vec2 {
             x: 24.0,
             y: HEIGHT as f32 / 2.0,
@@ -235,18 +235,18 @@ impl World {
         self.slime.vel.x = ((self.time_passed * 2.5).sin() * 80.0) - 40.0;
         self.slime.vel.y = (self.time_passed * 1.5).cos() * 20.0;
 
-        if collision_check(&self.player, &self.slime) && !self.slime_killed && !self.player_killed {
+        if collision_check(&self.player, &self.slime) && self.slime.alive && self.player.alive {
             println!("COLLISION");
 
             if self.slime.vel.x < 0.0 {
-                self.player_killed = true;
+                self.player.alive = false;
                 self.death_time = self.time_passed;
             } else {
-                self.slime_killed = true;
+                self.slime.alive = false;
             }
         }
 
-        if self.player_killed && self.time_passed - self.death_time > 3.0 {
+        if !self.player.alive && self.time_passed - self.death_time > 3.0 {
             self.reset();
         }
 
@@ -260,11 +260,11 @@ impl World {
     fn draw(&self, renderer: &mut Renderer) {
         renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
 
-        if !self.player_killed {
+        if self.player.alive {
             self.player.draw(renderer);
         }
 
-        if !self.slime_killed {
+        if self.slime.alive {
             self.slime.draw(renderer);
         }
         // Hide enemy
