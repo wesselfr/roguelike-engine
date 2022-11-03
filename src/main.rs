@@ -1,17 +1,17 @@
 use crate::easing::*;
 use crate::gui::Framework;
 use crate::renderer::*;
+use core::time;
 use glam::Vec2;
-use image::DynamicImage;
+use image::{flat, DynamicImage};
 use log::error;
 use pixels::Error;
+use std::time::{Duration, Instant};
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use core::time;
-use std::time::{Duration, Instant};
 
 mod easing;
 mod gui;
@@ -26,7 +26,11 @@ struct World {
     player: Entity,
     slime: Entity,
     now: Instant,
-    time_passed: f32, 
+    time_passed: f32,
+    death_time: f32,
+
+    slime_killed: bool,
+    player_killed: bool,
 }
 
 struct Entity {
@@ -98,8 +102,7 @@ fn main() -> Result<(), Error> {
             }
 
             if input.key_pressed(VirtualKeyCode::R) {
-                world.player.pos.x = 0.0;
-                world.player.pos.y = 0.0;
+                world.reset();
             }
 
             // Update internal state and request a redraw
@@ -147,6 +150,18 @@ fn main() -> Result<(), Error> {
     });
 }
 
+// 1D Check
+fn collision_check(a: &Entity, b: &Entity) -> bool {
+    if a.pos.x + BOX_SIZE as f32 >= b.pos.x && a.pos.x <= b.pos.x + BOX_SIZE as f32
+    // && a.pos.y >= b.pos.y
+    // && a.pos.y <= b.pos.y + BOX_SIZE as f32
+    {
+        true
+    } else {
+        false
+    }
+}
+
 impl World {
     /// Create a new `World` instance that can draw a moving box.
     fn new() -> Self {
@@ -171,7 +186,25 @@ impl World {
             ),
             now: Instant::now(),
             time_passed: 0.0,
+            death_time: 0.0,
+
+            slime_killed: false,
+            player_killed: false,
         }
+    }
+
+    fn reset(&mut self) {
+        self.death_time = 0.0;
+        self.player_killed = false;
+        self.slime_killed = false;
+        self.player.pos = Vec2 {
+            x: 24.0,
+            y: HEIGHT as f32 / 2.0,
+        };
+        self.slime.pos = Vec2 {
+            x: WIDTH as f32,
+            y: HEIGHT as f32 / 2.0,
+        };
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
@@ -199,7 +232,23 @@ impl World {
             self.player.vel.y *= -1.0;
         }
 
-        self.slime.vel.x = -20.0 + (self.time_passed * 0.5).sin() * 40.0;
+        self.slime.vel.x = ((self.time_passed * 2.5).sin() * 80.0) - 40.0;
+        self.slime.vel.y = (self.time_passed * 1.5).cos() * 20.0;
+
+        if collision_check(&self.player, &self.slime) && !self.slime_killed && !self.player_killed {
+            println!("COLLISION");
+
+            if self.slime.vel.x < 0.0 {
+                self.player_killed = true;
+                self.death_time = self.time_passed;
+            } else {
+                self.slime_killed = true;
+            }
+        }
+
+        if self.player_killed && self.time_passed - self.death_time > 3.0 {
+            self.reset();
+        }
 
         self.player.update(dt);
         self.slime.update(dt);
@@ -211,18 +260,16 @@ impl World {
     fn draw(&self, renderer: &mut Renderer) {
         renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
 
-        // renderer.draw_square(
-        //     self.box_pos,
-        //     Vec2 {
-        //         x: BOX_SIZE as f32,
-        //         y: BOX_SIZE as f32,
-        //     },
-        // );
+        if !self.player_killed {
+            self.player.draw(renderer);
+        }
 
-        self.player.draw(renderer);
-
-        if self.time_passed as u32 % 4 == 0{
+        if !self.slime_killed {
             self.slime.draw(renderer);
         }
+        // Hide enemy
+        // if self.time_passed as u32 % 4 == 0{
+        //     self.slime.draw(renderer);
+        // }
     }
 }
