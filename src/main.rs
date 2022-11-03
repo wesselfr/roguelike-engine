@@ -24,7 +24,7 @@ const BOX_SIZE: i16 = 64;
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
     player: Entity,
-    slime: Entity,
+    slimes: Vec<Entity>,
     now: Instant,
     time_passed: f32,
     death_time: f32,
@@ -179,14 +179,32 @@ impl World {
                 image::open("src/assets/weapon_sword_1.png").unwrap(),
             ),
             // Slime entity
-            slime: Entity::new(
-                Vec2 {
-                    x: WIDTH as f32,
-                    y: HEIGHT as f32 / 2.0,
-                },
-                Vec2 { x: -1.0, y: 0.0 },
-                image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
-            ),
+            slimes: vec![
+                Entity::new(
+                    Vec2 {
+                        x: 300.0,
+                        y: HEIGHT as f32 / 2.0,
+                    },
+                    Vec2::ZERO,
+                    image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
+                ),
+                Entity::new(
+                    Vec2 {
+                        x: 600.0,
+                        y: HEIGHT as f32 / 2.0,
+                    },
+                    Vec2::ZERO,
+                    image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
+                ),
+                Entity::new(
+                    Vec2 {
+                        x: 900.0,
+                        y: HEIGHT as f32 / 2.0,
+                    },
+                    Vec2::ZERO,
+                    image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
+                ),
+            ],
             now: Instant::now(),
             time_passed: 0.0,
             death_time: 0.0,
@@ -196,15 +214,18 @@ impl World {
     fn reset(&mut self) {
         self.death_time = 0.0;
         self.player.alive = true;
-        self.slime.alive = true;
         self.player.pos = Vec2 {
             x: 24.0,
             y: HEIGHT as f32 / 2.0,
         };
-        self.slime.pos = Vec2 {
-            x: WIDTH as f32,
-            y: HEIGHT as f32 / 2.0,
-        };
+
+        for (i, slime) in self.slimes.iter_mut().enumerate() {
+            slime.alive = true;
+            slime.pos = Vec2 {
+                x: 300.0 * (1 + i) as f32,
+                y: HEIGHT as f32 / 2.0,
+            }
+        }
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
@@ -232,18 +253,21 @@ impl World {
             self.player.vel.y *= -1.0;
         }
 
-        self.slime.vel.x = ((self.time_passed * 2.5).sin() * 80.0) - 40.0;
-        self.slime.vel.y = (self.time_passed * 1.5).cos() * 20.0;
+        for slime in &mut self.slimes {
+            slime.vel.x = ((self.time_passed * 2.5).sin() * 80.0) - 40.0;
+            slime.vel.y = (self.time_passed * 1.5).cos() * 20.0;
 
-        if collision_check(&self.player, &self.slime) && self.slime.alive && self.player.alive {
-            println!("COLLISION");
+            if collision_check(&self.player, &slime) && slime.alive && self.player.alive {
+                println!("COLLISION");
 
-            if self.slime.vel.x < 0.0 {
-                self.player.alive = false;
-                self.death_time = self.time_passed;
-            } else {
-                self.slime.alive = false;
+                if slime.vel.x < 0.0 {
+                    self.player.alive = false;
+                    self.death_time = self.time_passed;
+                } else {
+                    slime.alive = false;
+                }
             }
+            slime.update(dt);
         }
 
         if !self.player.alive && self.time_passed - self.death_time > 3.0 {
@@ -251,21 +275,32 @@ impl World {
         }
 
         self.player.update(dt);
-        self.slime.update(dt);
     }
 
     /// Draw the `World` state to the frame buffer.
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, renderer: &mut Renderer) {
-        renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
+        let mut won = true;
+        for slime in &self.slimes {
+            if slime.alive {
+                won = false;
+            }
+        }
+        if !won {
+            renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
+        } else {
+            renderer.clear_frame([0x48, 0xe8, 0x5f, 0xff]);
+        }
 
         if self.player.alive {
             self.player.draw(renderer);
         }
 
-        if self.slime.alive {
-            self.slime.draw(renderer);
+        for slime in &self.slimes {
+            if slime.alive {
+                slime.draw(renderer);
+            }
         }
         // Hide enemy
         // if self.time_passed as u32 % 4 == 0{
