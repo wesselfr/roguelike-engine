@@ -1,6 +1,7 @@
 use crate::gui::Framework;
 use crate::renderer::*;
 use glam::Vec2;
+use image::DynamicImage;
 use log::error;
 use pixels::Error;
 use winit::dpi::LogicalSize;
@@ -20,6 +21,7 @@ const BOX_SIZE: i16 = 64;
 struct World {
     box_pos: Vec2,
     box_vel: Vec2,
+    image: DynamicImage,
 }
 
 fn main() -> Result<(), Error> {
@@ -126,6 +128,7 @@ impl World {
         Self {
             box_pos: Vec2 { x: 24.0, y: 16.0 },
             box_vel: Vec2 { x: 1.0, y: 1.0 },
+            image: image::open("src/assets/weapon_sword_1.png").unwrap(),
         }
     }
 
@@ -149,10 +152,10 @@ impl World {
         }
 
         // Bound check
-        if self.box_pos.x <= 0.0 || self.box_pos.x + BOX_SIZE as f32 > WIDTH as f32 {
+        if self.box_pos.x <= 0.0 || self.box_pos.x as u32 + BOX_SIZE as u32  > WIDTH {
             self.box_vel.x *= -1.0;
         }
-        if self.box_pos.y <= 0.0 || self.box_pos.y + BOX_SIZE as f32 > HEIGHT as f32 {
+        if self.box_pos.y <= 0.0 || self.box_pos.y as u32 + BOX_SIZE as u32 > HEIGHT {
             self.box_vel.y *= -1.0;
         }
 
@@ -165,12 +168,14 @@ impl World {
     fn draw(&self, renderer: &mut Renderer) {
         renderer.clear_frame([0x48, 0xb2, 0xe8, 0xff]);
 
-        renderer.draw_square(
-            self.box_pos,
-            Vec2 {
-                x: BOX_SIZE as f32,
-                y: BOX_SIZE as f32,
-            },
-        );
+        // renderer.draw_square(
+        //     self.box_pos,
+        //     Vec2 {
+        //         x: BOX_SIZE as f32,
+        //         y: BOX_SIZE as f32,
+        //     },
+        // );
+
+        renderer.draw_sprite(self.box_pos, &self.image, 4)
     }
 }

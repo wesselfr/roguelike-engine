@@ -1,4 +1,5 @@
 use glam::Vec2;
+use image::{DynamicImage, GenericImageView};
 use pixels::{Pixels, SurfaceTexture};
 use winit::window::Window;
 
@@ -41,6 +42,23 @@ impl Renderer {
             if inside_the_box {
                 let rgba = [0x5e, 0x48, 0xe8, 0xff];
                 pixel.copy_from_slice(&rgba);
+            }
+        }
+    }
+
+    pub(crate) fn draw_sprite(&mut self, pos: Vec2, image: &DynamicImage, scale: u32) {
+        let (size_x, size_y) = image.dimensions();
+        for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
+            let x = i as u32 % self.width - pos.x as u32;
+            let y = i as u32 / self.width - pos.y as u32;
+            //let pixel = image.get_pixel(x, y);
+            //pixel.0;
+
+            if x > 0 && x < size_x * scale && y > 0 && y < size_y * scale {
+                let data = &image.get_pixel(x /scale, y / scale).0;
+                if data[3] > 0 {
+                    pixel.copy_from_slice(data);
+                }
             }
         }
     }
