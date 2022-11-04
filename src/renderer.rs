@@ -1,4 +1,4 @@
-use fontdue;
+use fontdue::{self, Font};
 use glam::Vec2;
 use image::{DynamicImage, GenericImageView};
 use pixels::{Pixels, SurfaceTexture};
@@ -8,6 +8,7 @@ pub(crate) struct Renderer {
     pub pixels: Pixels,
     width: u32,
     _height: u32,
+    font: Font,
 }
 
 impl Renderer {
@@ -21,6 +22,12 @@ impl Renderer {
             pixels,
             width: window_size.width as u32,
             _height: window_size.height as u32,
+            font: {
+                // Read the font data.
+                let font = include_bytes!("assets/kenpixel_mini_square.ttf") as &[u8];
+                // Parse it into the font type.
+                fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap()
+            },
         }
     }
 
@@ -52,8 +59,6 @@ impl Renderer {
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
             let x = i as u32 % self.width - pos.x as u32;
             let y = i as u32 / self.width - pos.y as u32;
-            //let pixel = image.get_pixel(x, y);
-            //pixel.0;
 
             if x > 0 && x < size_x * scale && y > 0 && y < size_y * scale {
                 let data = &image.get_pixel(x / scale, y / scale).0;
@@ -65,19 +70,14 @@ impl Renderer {
     }
 
     pub(crate) fn draw_char(&mut self, pos: Vec2, char: char, size: f32, color: [u8; 4]) {
-        // Read the font data.
-        let font = include_bytes!("assets/kenpixel_mini_square.ttf") as &[u8];
-        // Parse it into the font type.
-        let font = fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
-        // Rasterize and get the layout metrics for the letter 'g' at 17px.
-        let (metrics, bitmap) = font.rasterize(char, size);
+        let (metrics, bitmap) = self.font.rasterize(char, size);
 
         let size_x = metrics.width as u32;
         let size_y = metrics.height as u32;
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
             let x = (i as i32 % self.width as i32 - pos.x as i32) as u32;
             let y = (i as i32 / self.width as i32 - pos.y as i32) as u32;
-            
+
             if x < size_x && y < size_y {
                 let data_raw = bitmap[(y * size_x + x) as usize];
                 if data_raw == 255 {
@@ -87,8 +87,14 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_text(&mut self, pos: Vec2, text: &str, size: f32, spacing: f32, color: [u8; 4])
-    {
+    pub(crate) fn draw_text(
+        &mut self,
+        pos: Vec2,
+        text: &str,
+        size: f32,
+        spacing: f32,
+        color: [u8; 4],
+    ) {
         for (i, char) in text.chars().enumerate() {
             self.draw_char(
                 Vec2 {
@@ -97,10 +103,8 @@ impl Renderer {
                 },
                 char,
                 size,
-                color
+                color,
             );
         }
     }
-
-
 }
