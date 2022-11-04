@@ -31,6 +31,7 @@ const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff];
 struct World {
     player_sprite: DynamicImage,
     grid: [u8; GRID_WIDTH * GRID_HEIGHT],
+    new_grid: [u8; GRID_WIDTH * GRID_HEIGHT],
     now: Instant,
     time_passed: f32,
 }
@@ -134,16 +135,76 @@ impl World {
         Self {
             player_sprite: image::open("src/assets/weapon_sword_1.png").unwrap(),
             grid: [0; 25],
+            new_grid: [0;25],
             now: Instant::now(),
             time_passed: 0.0,
         }
     }
 
+    fn reset(&mut self) {
+        self.grid[2] = 1;
+    }
+
     /// Update the `World` internal state; bounce the box around the screen.
     fn update(&mut self, input: &mut WinitInputHelper) {
+        // Todo: Remove this way of initialization.
+        if self.time_passed == 0.0 {
+            self.reset()
+        };
+
         let dt = self.now.elapsed().as_secs_f32();
         self.time_passed += dt;
         self.now = Instant::now();
+
+        let mut player_dir_x:i32 = 0;
+        let mut player_dir_y:i32 = 0;
+
+        if input.key_pressed(VirtualKeyCode::W)
+        {
+            player_dir_y = -1;
+        }
+        if input.key_pressed(VirtualKeyCode::S)
+        {
+            player_dir_y = 1;
+        }
+        if input.key_pressed(VirtualKeyCode::A)
+        {
+            player_dir_x = -1;
+        }
+        if input.key_pressed(VirtualKeyCode::D)
+        {
+            player_dir_x = 1;
+        }
+
+        for y in 0..GRID_HEIGHT {
+            for x in 0..GRID_WIDTH {
+                let index = y * GRID_WIDTH + x;
+
+                if self.grid[index] == 1
+                {
+                    let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32 + x as i32 + player_dir_x) as usize;
+                    
+                    if new_index != index
+                    {
+                        self.new_grid[index] = 0;
+                        self.new_grid[new_index] = 1;
+                    }
+                    else {
+                        self.new_grid[index] = 1;
+                    }
+                }
+                else
+                {
+                    //self.new_grid[index] = self.grid[index];
+                }
+            }
+        }
+
+        for i in 0..GRID_WIDTH*GRID_HEIGHT
+        {
+            self.grid[i] = self.new_grid[i];
+        }
+
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -184,7 +245,20 @@ impl World {
                     );
                 }
 
-                if index == 15 {
+                if self.grid[index] == 2 {
+                    renderer.draw_char(
+                        GRID_OFFSET
+                            + Vec2 {
+                                x: x as f32 * 32.0 + 8.0,
+                                y: y as f32 * 32.0 + 8.0,
+                            },
+                        'E',
+                        32.0,
+                        [0xea, 0x10, 0x26, 0xff],
+                    );
+                }
+
+                if self.grid[index] == 1 {
                     renderer.draw_sprite(
                         GRID_OFFSET
                             + Vec2 {
