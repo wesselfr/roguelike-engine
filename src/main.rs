@@ -135,7 +135,7 @@ impl World {
         Self {
             player_sprite: image::open("src/assets/weapon_sword_1.png").unwrap(),
             grid: [0; 25],
-            new_grid: [0;25],
+            new_grid: [0; 25],
             now: Instant::now(),
             time_passed: 0.0,
         }
@@ -156,23 +156,19 @@ impl World {
         self.time_passed += dt;
         self.now = Instant::now();
 
-        let mut player_dir_x:i32 = 0;
-        let mut player_dir_y:i32 = 0;
+        let mut player_dir_x: i32 = 0;
+        let mut player_dir_y: i32 = 0;
 
-        if input.key_pressed(VirtualKeyCode::W)
-        {
+        if input.key_pressed(VirtualKeyCode::W) {
             player_dir_y = -1;
         }
-        if input.key_pressed(VirtualKeyCode::S)
-        {
+        if input.key_pressed(VirtualKeyCode::S) {
             player_dir_y = 1;
         }
-        if input.key_pressed(VirtualKeyCode::A)
-        {
+        if input.key_pressed(VirtualKeyCode::A) {
             player_dir_x = -1;
         }
-        if input.key_pressed(VirtualKeyCode::D)
-        {
+        if input.key_pressed(VirtualKeyCode::D) {
             player_dir_x = 1;
         }
 
@@ -180,31 +176,34 @@ impl World {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
-                if self.grid[index] == 1
-                {
-                    let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32 + x as i32 + player_dir_x) as usize;
-                    
-                    if new_index != index
-                    {
-                        self.new_grid[index] = 0;
-                        self.new_grid[new_index] = 1;
-                    }
-                    else {
+                if self.grid[index] == 1 {
+                    let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32
+                        + x as i32
+                        + player_dir_x) as usize;
+
+                    if new_index != index {
+                        let pos_x = x as i32;
+                        let pos_y = y as i32;
+                        if pos_x + player_dir_x >= 0
+                            && pos_x + player_dir_x as i32 <= GRID_WIDTH as i32 - 1
+                            && pos_y + player_dir_y >= 0
+                            && pos_y + player_dir_y as i32 <= GRID_WIDTH as i32 - 1
+                        {
+                            self.new_grid[index] = 0;
+                            self.new_grid[new_index] = 1;
+                        }
+                    } else {
                         self.new_grid[index] = 1;
                     }
-                }
-                else
-                {
+                } else {
                     //self.new_grid[index] = self.grid[index];
                 }
             }
         }
 
-        for i in 0..GRID_WIDTH*GRID_HEIGHT
-        {
+        for i in 0..GRID_WIDTH * GRID_HEIGHT {
             self.grid[i] = self.new_grid[i];
         }
-
     }
 
     /// Draw the `World` state to the frame buffer.
