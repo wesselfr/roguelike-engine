@@ -64,7 +64,7 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_char(&mut self, pos: Vec2, char: char, size: f32) {
+    pub(crate) fn draw_char(&mut self, pos: Vec2, char: char, size: f32, color: [u8; 4]) {
         // Read the font data.
         let font = include_bytes!("assets/kenpixel_mini_square.ttf") as &[u8];
         // Parse it into the font type.
@@ -77,16 +77,30 @@ impl Renderer {
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
             let x = i as u32 % self.width - pos.x as u32;
             let y = i as u32 / self.width - pos.y as u32;
-            //let pixel = image.get_pixel(x, y);
-            //pixel.0;
 
             if x < size_x && y < size_y {
                 let data_raw = bitmap[(y * size_x + x) as usize];
-                let data = [data_raw, data_raw, data_raw, data_raw];
                 if data_raw == 255 {
-                    pixel.copy_from_slice(&data);
+                    pixel.copy_from_slice(&color);
                 }
             }
         }
     }
+
+    pub(crate) fn draw_text(&mut self, pos: Vec2, text: &str, spacing: f32, color: [u8; 4])
+    {
+        for (i, char) in text.chars().enumerate() {
+            self.draw_char(
+                Vec2 {
+                    x: 32.0 + spacing * i as f32,
+                    y: 30.0,
+                },
+                char,
+                32.0,
+                color
+            );
+        }
+    }
+
+
 }

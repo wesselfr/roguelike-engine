@@ -305,20 +305,7 @@ impl World {
         }
 
         let text = "Hello World!";
-        for (i, char) in text.chars().enumerate() {
-            renderer.draw_char(
-                Vec2 {
-                    x: 32.0 + 20.0 * i as f32,
-                    y: 30.0,
-                },
-                char,
-                32.0,
-            );
-        }
-
-        renderer.draw_char(Vec2 { x: 30.0, y: 60.0 }, 'A', 64.0);
-        renderer.draw_char(Vec2 { x: 70.0, y: 60.0 }, 'A', 32.0);
-        renderer.draw_char(Vec2 { x: 90.0, y: 60.0 }, 'A', 16.0);
+        renderer.draw_text(Vec2 { x: 32.0, y: 30.0 }, text, 24.0, [0x00,0xff,0xff,0xff])
 
         // Hide enemy
         // if self.time_passed as u32 % 4 == 0{
