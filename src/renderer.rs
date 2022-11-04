@@ -39,7 +39,7 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_square(&mut self, pos: Vec2, size: Vec2) {
+    pub(crate) fn draw_square(&mut self, pos: Vec2, size: Vec2, color: [u8; 4]) {
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
             let x = (i % self.width as usize) as i16;
             let y = (i / self.width as usize) as i16;
@@ -50,25 +50,13 @@ impl Renderer {
                 && y < pos.y as i16 + size.y as i16;
 
             if inside_the_box {
-                let rgba = [0x5e, 0x48, 0xe8, 0xff];
-                pixel.copy_from_slice(&rgba);
+                pixel.copy_from_slice(&color);
             }
         }
     }
 
     pub(crate) fn draw_sprite(&mut self, pos: Vec2, image: &DynamicImage, scale: u32) {
         let (size_x, size_y) = image.dimensions();
-        // for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
-        //     let x = i as u32 % self.width - pos.x as u32;
-        //     let y = i as u32 / self.width - pos.y as u32;
-
-        //     if x > 0 && x < size_x * scale && y > 0 && y < size_y * scale {
-        //         let data = &image.get_pixel(x / scale, y / scale).0;
-        //         if data[3] > 0 {
-        //             pixel.copy_from_slice(data);
-        //         }
-        //     }
-        // }
 
         let mut s = 0;
         for y in 0..size_y as usize * scale as usize {
@@ -76,7 +64,8 @@ impl Renderer {
                 + pos.y as usize * self.width as usize * 4
                 + y * self.width as usize * 4;
 
-            for (sprite_index, chunk) in self.pixels.get_frame_mut()[i..i + size_x as usize * 4 * scale as usize]
+            for (sprite_index, chunk) in self.pixels.get_frame_mut()
+                [i..i + size_x as usize * 4 * scale as usize]
                 .chunks_mut(4)
                 .enumerate()
             {
