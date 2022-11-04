@@ -75,9 +75,9 @@ impl Renderer {
         let size_x = metrics.width as u32;
         let size_y = metrics.height as u32;
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
-            let x = i as u32 % self.width - pos.x as u32;
-            let y = i as u32 / self.width - pos.y as u32;
-
+            let x = (i as i32 % self.width as i32 - pos.x as i32) as u32;
+            let y = (i as i32 / self.width as i32 - pos.y as i32) as u32;
+            
             if x < size_x && y < size_y {
                 let data_raw = bitmap[(y * size_x + x) as usize];
                 if data_raw == 255 {
@@ -87,16 +87,16 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_text(&mut self, pos: Vec2, text: &str, spacing: f32, color: [u8; 4])
+    pub(crate) fn draw_text(&mut self, pos: Vec2, text: &str, size: f32, spacing: f32, color: [u8; 4])
     {
         for (i, char) in text.chars().enumerate() {
             self.draw_char(
                 Vec2 {
-                    x: 32.0 + spacing * i as f32,
-                    y: 30.0,
+                    x: pos.x + spacing * i as f32,
+                    y: pos.y,
                 },
                 char,
-                32.0,
+                size,
                 color
             );
         }
