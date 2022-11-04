@@ -1,12 +1,11 @@
-use crate::easing::*;
+//use crate::easing::*;
 use crate::gui::Framework;
 use crate::renderer::*;
-use core::time;
 use glam::Vec2;
-use image::{flat, DynamicImage};
+use image::DynamicImage;
 use log::error;
 use pixels::Error;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -135,7 +134,7 @@ fn main() -> Result<(), Error> {
                             context.scaling_renderer.render(encoder, render_target);
 
                             // Render egui
-                            framework.render(encoder, render_target, context);
+                            //framework.render(encoder, render_target, context);
 
                             Ok(())
                         });
@@ -236,6 +235,7 @@ impl World {
 
         // Friction
         self.player.vel *= 0.8;
+        self.player.vel.y = 0.0;
 
         // Player Input
         if input.key_held(VirtualKeyCode::A) {
@@ -253,6 +253,7 @@ impl World {
             self.player.vel.y *= -1.0;
         }
 
+        // Slime movement and collision
         for slime in &mut self.slimes {
             slime.vel.x = ((self.time_passed * 2.5).sin() * 80.0) - 40.0;
             slime.vel.y = (self.time_passed * 1.5).cos() * 20.0;
@@ -302,6 +303,23 @@ impl World {
                 slime.draw(renderer);
             }
         }
+
+        let text = "Hello World!";
+        for (i, char) in text.chars().enumerate() {
+            renderer.draw_char(
+                Vec2 {
+                    x: 32.0 + 20.0 * i as f32,
+                    y: 30.0,
+                },
+                char,
+                32.0,
+            );
+        }
+
+        renderer.draw_char(Vec2 { x: 30.0, y: 60.0 }, 'A', 64.0);
+        renderer.draw_char(Vec2 { x: 70.0, y: 60.0 }, 'A', 32.0);
+        renderer.draw_char(Vec2 { x: 90.0, y: 60.0 }, 'A', 16.0);
+
         // Hide enemy
         // if self.time_passed as u32 % 4 == 0{
         //     self.slime.draw(renderer);

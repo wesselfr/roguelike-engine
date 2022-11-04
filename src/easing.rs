@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub fn ease_in_sine(val: f32) -> f32 {
     1.0 - ((val * std::f32::consts::PI) / 2.0).cos()
 }
