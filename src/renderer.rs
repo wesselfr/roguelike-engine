@@ -10,6 +10,7 @@ pub(crate) struct Renderer {
     pub pixels: Pixels,
     width: u32,
     _height: u32,
+    offset: Vec2,
     font: Font,
 }
 
@@ -24,6 +25,7 @@ impl Renderer {
             pixels,
             width: window_size.width as u32,
             _height: window_size.height as u32,
+            offset: Vec2::ZERO,
             font: {
                 // Read the font data.
                 let font = include_bytes!("assets/kenpixel_mini_square.ttf") as &[u8];
@@ -39,7 +41,13 @@ impl Renderer {
         }
     }
 
+    pub(crate) fn set_offset(&mut self, offset: Vec2)
+    {
+        self.offset = offset;
+    }
+
     pub(crate) fn draw_square(&mut self, pos: Vec2, size: Vec2, color: [u8; 4]) {
+        let pos = pos + self.offset;
         for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
             let x = (i % self.width as usize) as i16;
             let y = (i / self.width as usize) as i16;
@@ -57,6 +65,7 @@ impl Renderer {
 
     pub(crate) fn draw_sprite(&mut self, pos: Vec2, image: &DynamicImage, scale: u32) {
         let (size_x, size_y) = image.dimensions();
+        let pos = pos + self.offset;
 
         let mut s = 0;
         for y in 0..size_y as usize * scale as usize {
@@ -85,6 +94,7 @@ impl Renderer {
 
     pub(crate) fn draw_char(&mut self, pos: Vec2, char: char, size: f32, color: [u8; 4]) {
         let (metrics, bitmap) = self.font.rasterize(char, size);
+        let pos = pos + self.offset;
 
         let mut s = 0;
         for y in 0..metrics.height {

@@ -94,6 +94,12 @@ fn main() -> Result<(), Error> {
                 framework.resize(size.width, size.height);
             }
 
+            // Reset
+            if input.key_pressed(VirtualKeyCode::R)
+            {
+                world.reset();
+            }
+
             // Update internal state and request a redraw
             world.update(&mut input);
             window.request_redraw();
@@ -223,6 +229,8 @@ impl World {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, renderer: &mut Renderer) {
+        renderer.clear_frame([0x00,0x00, 0x00, 0x00]);
+        renderer.set_offset(Vec2::ZERO);
         renderer.draw_text(
             Vec2 { x: 32.0, y: 32.0 },
             "Hello World!",
@@ -230,6 +238,7 @@ impl World {
             24.0,
             [0xff, 0xff, 0xff, 0xff],
         );
+        renderer.set_offset(Vec2::ONE * 100.0 * (self.time_passed * 3.0).sin());
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
