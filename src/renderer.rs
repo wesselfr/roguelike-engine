@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use fontdue::{self, Font};
 use glam::Vec2;
 use image::{DynamicImage, GenericImageView};
@@ -72,18 +74,25 @@ impl Renderer {
     pub(crate) fn draw_char(&mut self, pos: Vec2, char: char, size: f32, color: [u8; 4]) {
         let (metrics, bitmap) = self.font.rasterize(char, size);
 
-        let size_x = metrics.width as u32;
-        let size_y = metrics.height as u32;
-        for (i, pixel) in self.pixels.get_frame_mut().chunks_exact_mut(4).enumerate() {
-            let x = (i as i32 % self.width as i32 - pos.x as i32) as u32;
-            let y = (i as i32 / self.width as i32 - pos.y as i32) as u32;
+        let mut s = 0;
+        for y in 0..metrics.height {
+            let i = pos.x as usize * 4
+                + pos.y as usize * self.width as usize * 4
+                + y * self.width as usize * 4;
 
-            if x < size_x && y < size_y {
-                let data_raw = bitmap[(y * size_x + x) as usize];
-                if data_raw == 255 {
-                    pixel.copy_from_slice(&color);
+            for (bitmap_index, chunk) in self.pixels.get_frame_mut()[i..i + metrics.width * 4]
+                .chunks_mut(4)
+                .enumerate()
+            {
+                let bitmap_index = bitmap_index + y * metrics.width;
+                if bitmap[bitmap_index] > 0 {
+                    for (col, pixel) in chunk.iter_mut().enumerate() {
+                        *pixel = color[col];
+                    }
                 }
             }
+
+            s += metrics.width * 4;
         }
     }
 
