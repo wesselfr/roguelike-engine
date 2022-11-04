@@ -1,10 +1,12 @@
 //use crate::easing::*;
 use crate::gui::Framework;
 use crate::renderer::*;
+use bitflags::bitflags;
 use glam::Vec2;
 use image::DynamicImage;
 use log::error;
 use pixels::Error;
+use std::cell::Cell;
 use std::time::Instant;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
@@ -26,6 +28,14 @@ const GRID_OFFSET: Vec2 = Vec2 { x: 100.0, y: 100.0 };
 
 const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
 const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff];
+
+bitflags! {
+    struct CellType: u8
+    {
+        const PLAYER = 1 << 0;
+        const ENEMY = 1 << 1;
+    }
+}
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
@@ -142,7 +152,8 @@ impl World {
     }
 
     fn reset(&mut self) {
-        self.grid[2] = 1;
+        self.grid[2] = CellType::PLAYER.bits;
+        self.grid[8] = CellType::ENEMY.bits;
     }
 
     /// Update the `World` internal state; bounce the box around the screen.
@@ -176,7 +187,7 @@ impl World {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
-                if self.grid[index] == 1 {
+                if self.grid[index] == CellType::PLAYER.bits {
                     let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32
                         + x as i32
                         + player_dir_x) as usize;
@@ -190,13 +201,15 @@ impl World {
                             && pos_y + player_dir_y as i32 <= GRID_WIDTH as i32 - 1
                         {
                             self.new_grid[index] = 0;
-                            self.new_grid[new_index] = 1;
+                            self.new_grid[new_index] = CellType::PLAYER.bits;
                         }
                     } else {
-                        self.new_grid[index] = 1;
+                        self.new_grid[index] = CellType::PLAYER.bits;
                     }
-                } else {
-                    //self.new_grid[index] = self.grid[index];
+                }
+                else if self.grid[index] == CellType::ENEMY.bits
+                {
+                    self.new_grid[index] = CellType::ENEMY.bits;
                 }
             }
         }
@@ -244,7 +257,19 @@ impl World {
                     );
                 }
 
-                if self.grid[index] == 2 {
+                if self.grid[index] == CellType::PLAYER.bits {
+                    renderer.draw_sprite(
+                        GRID_OFFSET
+                            + Vec2 {
+                                x: x as f32 * 32.0,
+                                y: y as f32 * 32.0,
+                            },
+                        &self.player_sprite,
+                        2,
+                    );
+                }
+
+                if self.grid[index] == CellType::ENEMY.bits {
                     renderer.draw_char(
                         GRID_OFFSET
                             + Vec2 {
@@ -254,18 +279,6 @@ impl World {
                         'E',
                         32.0,
                         [0xea, 0x10, 0x26, 0xff],
-                    );
-                }
-
-                if self.grid[index] == 1 {
-                    renderer.draw_sprite(
-                        GRID_OFFSET
-                            + Vec2 {
-                                x: x as f32 * 32.0,
-                                y: y as f32 * 32.0,
-                            },
-                        &self.player_sprite,
-                        2,
                     );
                 }
             }
