@@ -18,14 +18,13 @@ mod renderer;
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
-const BOX_SIZE: i16 = 64;
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
+    sprite: DynamicImage,
     now: Instant,
     time_passed: f32,
 }
-
 
 fn main() -> Result<(), Error> {
     env_logger::init();
@@ -124,6 +123,7 @@ impl World {
     /// Create a new `World` instance that can draw a moving box.
     fn new() -> Self {
         Self {
+            sprite: image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
             now: Instant::now(),
             time_passed: 0.0,
         }
@@ -140,6 +140,14 @@ impl World {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, renderer: &mut Renderer) {
-        
+        renderer.draw_text(
+            Vec2 { x: 32.0, y: 32.0 },
+            "Hello World!",
+            32.0,
+            24.0,
+            [0xff, 0xff, 0xff, 0xff],
+        );
+
+        renderer.draw_sprite(Vec2 { x: 50.0, y: 50.0 }, &self.sprite, 4);
     }
 }
