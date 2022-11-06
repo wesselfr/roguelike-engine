@@ -102,7 +102,6 @@ impl Renderer {
         let (size_x, size_y) = image.dimensions();
         let pos = pos + self.offset;
 
-        println!("FRAME: {}", frame);
         let size_x = size_x / total_frames;
 
         let mut s = 0;
