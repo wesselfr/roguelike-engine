@@ -123,7 +123,7 @@ impl World {
     /// Create a new `World` instance that can draw a moving box.
     fn new() -> Self {
         Self {
-            sprite: image::open("src/assets/slime_idle_anim_f0.png").unwrap(),
+            sprite: image::open("src/assets/slime_idle_spritesheet.png").unwrap(),
             now: Instant::now(),
             time_passed: 0.0,
         }
@@ -148,6 +148,12 @@ impl World {
             [0xff, 0xff, 0xff, 0xff],
         );
 
-        renderer.draw_sprite(Vec2 { x: 50.0, y: 50.0 }, &self.sprite, 4);
+        renderer.draw_sprite_animated(
+            Vec2 { x: 50.0, y: 50.0 },
+            &self.sprite,
+            4,
+            ((self.time_passed * 8.0) % 5.0).round() as u32,
+            6,
+        );
     }
 }

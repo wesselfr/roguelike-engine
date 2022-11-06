@@ -41,8 +41,7 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn set_offset(&mut self, offset: Vec2)
-    {
+    pub(crate) fn set_offset(&mut self, offset: Vec2) {
         self.offset = offset;
     }
 
@@ -79,6 +78,46 @@ impl Renderer {
                 .enumerate()
             {
                 let x = sprite_index as u32 / scale;
+                let data = &image.get_pixel(x, y as u32 / scale as u32).0;
+
+                if data[3] > 0 {
+                    for (col, pixel) in chunk.iter_mut().enumerate() {
+                        *pixel = data[col];
+                    }
+                }
+            }
+
+            s += size_x * 4;
+        }
+    }
+
+    pub(crate) fn draw_sprite_animated(
+        &mut self,
+        pos: Vec2,
+        image: &DynamicImage,
+        scale: u32,
+        frame: u32,
+        total_frames: u32,
+    ) {
+        let (size_x, size_y) = image.dimensions();
+        let pos = pos + self.offset;
+
+        println!("FRAME: {}", frame);
+        let size_x = size_x / total_frames;
+
+        let mut s = 0;
+        for y in 0..size_y as usize * scale as usize {
+            let i = pos.x as usize * 4
+                + pos.y as usize * self.width as usize * 4
+                + y * self.width as usize * 4;
+
+            for (sprite_index, chunk) in self.pixels.get_frame_mut()
+                [i..i + size_x as usize * 4 * scale as usize]
+                .chunks_mut(4)
+                .enumerate()
+            {
+                let frame_offset = size_x * frame;
+                let x = frame_offset + sprite_index as u32 / scale;
                 let data = &image.get_pixel(x, y as u32 / scale as u32).0;
 
                 if data[3] > 0 {
