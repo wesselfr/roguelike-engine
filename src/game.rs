@@ -1,20 +1,20 @@
 use crate::renderer::Renderer;
+use crate::sprite::Sprite;
 use glam::Vec2;
-use image::DynamicImage;
 use winit_input_helper::WinitInputHelper;
 
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 480;
 
 pub struct Game {
-    sprite: DynamicImage,
+    slime: Sprite,
     time_passed: f32,
 }
 
 impl Game {
     pub(crate) fn new() -> Self {
         Self {
-            sprite: image::open("assets/slime_idle_spritesheet.png").unwrap(),
+            slime: Sprite::from_image_animated("assets/slime_idle_spritesheet.png", 6, None),
             time_passed: 0.0,
         }
     }
@@ -34,10 +34,10 @@ impl Game {
 
         renderer.draw_sprite_animated(
             Vec2 { x: 50.0, y: 50.0 },
-            &self.sprite,
-            4,
+            &self.slime,
             ((self.time_passed * 8.0) % 5.0).round() as u32,
-            6,
         );
+
+        renderer.draw_sprite(Vec2 { x: 100.0, y: 150.0 }, &Sprite::from_image("assets/goblin_idle_anim_f0.png", Some(8.0)))
     }
 }

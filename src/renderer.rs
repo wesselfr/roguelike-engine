@@ -1,5 +1,4 @@
-use std::ops::Index;
-
+use crate::sprite::Sprite;
 use fontdue::{self, Font};
 use glam::Vec2;
 use image::{DynamicImage, GenericImageView};
@@ -62,23 +61,22 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_sprite(&mut self, pos: Vec2, image: &DynamicImage, scale: u32) {
-        let (size_x, size_y) = image.dimensions();
+    pub(crate) fn draw_sprite(&mut self, pos: Vec2, sprite: &Sprite) {
         let pos = pos + self.offset;
 
         let mut s = 0;
-        for y in 0..size_y as usize * scale as usize {
+        for y in 0..sprite.height as usize * sprite.scale as usize {
             let i = pos.x as usize * 4
                 + pos.y as usize * self.width as usize * 4
                 + y * self.width as usize * 4;
 
             for (sprite_index, chunk) in self.pixels.get_frame_mut()
-                [i..i + size_x as usize * 4 * scale as usize]
+                [i..i + sprite.width as usize * 4 * sprite.scale as usize]
                 .chunks_mut(4)
                 .enumerate()
             {
-                let x = sprite_index as u32 / scale;
-                let data = &image.get_pixel(x, y as u32 / scale as u32).0;
+                let x = sprite_index as u32 / sprite.scale as u32;
+                let data = &sprite.image.get_pixel(x, y as u32 / sprite.scale as u32).0;
 
                 if data[3] > 0 {
                     for (col, pixel) in chunk.iter_mut().enumerate() {
@@ -87,37 +85,31 @@ impl Renderer {
                 }
             }
 
-            s += size_x * 4;
+            s += sprite.width * 4;
         }
     }
 
-    pub(crate) fn draw_sprite_animated(
-        &mut self,
-        pos: Vec2,
-        image: &DynamicImage,
-        scale: u32,
-        frame: u32,
-        total_frames: u32,
-    ) {
-        let (size_x, size_y) = image.dimensions();
+    pub(crate) fn draw_sprite_animated(&mut self, pos: Vec2, sprite: &Sprite, frame: u32) {
+        let size_x = sprite.width as u32;
+        let size_y = sprite.height as u32;
         let pos = pos + self.offset;
 
-        let size_x = size_x / total_frames;
+        let size_x = size_x / sprite.frame_num;
 
         let mut s = 0;
-        for y in 0..size_y as usize * scale as usize {
+        for y in 0..size_y as usize * sprite.scale as usize {
             let i = pos.x as usize * 4
                 + pos.y as usize * self.width as usize * 4
                 + y * self.width as usize * 4;
 
             for (sprite_index, chunk) in self.pixels.get_frame_mut()
-                [i..i + size_x as usize * 4 * scale as usize]
+                [i..i + size_x as usize * 4 * sprite.scale as usize]
                 .chunks_mut(4)
                 .enumerate()
             {
                 let frame_offset = size_x * frame;
-                let x = frame_offset + sprite_index as u32 / scale;
-                let data = &image.get_pixel(x, y as u32 / scale as u32).0;
+                let x = frame_offset + sprite_index as u32 / sprite.scale as u32;
+                let data = &sprite.image.get_pixel(x, y as u32 / sprite.scale as u32).0;
 
                 if data[3] > 0 {
                     for (col, pixel) in chunk.iter_mut().enumerate() {

@@ -13,6 +13,7 @@ use crate::renderer::*;
 mod game;
 mod gui;
 mod renderer;
+mod sprite;
 
 fn run_engine() {
     env_logger::init();
