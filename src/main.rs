@@ -1,10 +1,4 @@
-//use crate::easing::*;
-use crate::gui::Framework;
-use crate::renderer::*;
-use glam::Vec2;
-use image::DynamicImage;
 use log::error;
-use pixels::Error;
 use std::time::Instant;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
@@ -12,21 +6,15 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-mod easing;
+use crate::game::*;
+use crate::gui::Framework;
+use crate::renderer::*;
+
+mod game;
 mod gui;
 mod renderer;
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 480;
-
-/// Representation of the application state. In this example, a box will bounce around the screen.
-struct World {
-    sprite: DynamicImage,
-    now: Instant,
-    time_passed: f32,
-}
-
-fn main() -> Result<(), Error> {
+fn run_engine() {
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
@@ -41,6 +29,7 @@ fn main() -> Result<(), Error> {
     };
 
     let mut renderer = Renderer::new(&window);
+    let mut game = Game::new();
 
     let window_size = window.inner_size();
     let scale_factor = window.scale_factor() as f32;
@@ -52,7 +41,8 @@ fn main() -> Result<(), Error> {
         &renderer.pixels,
     );
 
-    let mut world = World::new();
+    let mut now = Instant::now();
+    let mut dt = 0.0;
 
     event_loop.run(move |event, _, control_flow| {
         // Handle input events
@@ -75,7 +65,7 @@ fn main() -> Result<(), Error> {
             }
 
             // Update internal state and request a redraw
-            world.update(&mut input);
+            game.update(&mut input, dt);
             window.request_redraw();
         }
 
@@ -86,8 +76,12 @@ fn main() -> Result<(), Error> {
             }
             // Draw the current frame
             Event::RedrawRequested(_) => {
+                // Update deltatime
+                dt = now.elapsed().as_secs_f32();
+                now = Instant::now();
+
                 // Draw the world
-                world.draw(&mut renderer);
+                game.draw(&mut renderer);
 
                 // Prepare egui
                 framework.prepare(&window);
@@ -119,41 +113,7 @@ fn main() -> Result<(), Error> {
     });
 }
 
-impl World {
-    /// Create a new `World` instance that can draw a moving box.
-    fn new() -> Self {
-        Self {
-            sprite: image::open("src/assets/slime_idle_spritesheet.png").unwrap(),
-            now: Instant::now(),
-            time_passed: 0.0,
-        }
-    }
-
-    /// Update the `World` internal state; bounce the box around the screen.
-    fn update(&mut self, input: &mut WinitInputHelper) {
-        let dt = self.now.elapsed().as_secs_f32();
-        self.time_passed += dt;
-        self.now = Instant::now();
-    }
-
-    /// Draw the `World` state to the frame buffer.
-    ///
-    /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
-    fn draw(&self, renderer: &mut Renderer) {
-        renderer.draw_text(
-            Vec2 { x: 32.0, y: 32.0 },
-            "Hello World!",
-            32.0,
-            24.0,
-            [0xff, 0xff, 0xff, 0xff],
-        );
-
-        renderer.draw_sprite_animated(
-            Vec2 { x: 50.0, y: 50.0 },
-            &self.sprite,
-            4,
-            ((self.time_passed * 8.0) % 5.0).round() as u32,
-            6,
-        );
-    }
+// Todo: Initialization and shutdown procedures.
+fn main() {
+    run_engine();
 }

@@ -28,7 +28,7 @@ impl Renderer {
             offset: Vec2::ZERO,
             font: {
                 // Read the font data.
-                let font = include_bytes!("assets/kenpixel_mini_square.ttf") as &[u8];
+                let font = include_bytes!("../assets/kenpixel_mini_square.ttf") as &[u8];
                 // Parse it into the font type.
                 fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap()
             },
