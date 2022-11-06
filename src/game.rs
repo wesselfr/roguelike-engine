@@ -19,7 +19,7 @@ impl Game {
         }
     }
 
-    pub(crate) fn update(&mut self, input: &mut WinitInputHelper, dt: f32) {
+    pub(crate) fn update(&mut self, _input: &mut WinitInputHelper, dt: f32) {
         self.time_passed += dt;
     }
 
