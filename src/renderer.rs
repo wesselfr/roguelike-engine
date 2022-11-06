@@ -1,7 +1,8 @@
+#![allow(dead_code)]
 use crate::sprite::Sprite;
 use fontdue::{self, Font};
 use glam::Vec2;
-use image::{DynamicImage, GenericImageView};
+use image::GenericImageView;
 use pixels::{Pixels, SurfaceTexture};
 use winit::window::Window;
 
@@ -64,7 +65,6 @@ impl Renderer {
     pub(crate) fn draw_sprite(&mut self, pos: Vec2, sprite: &Sprite) {
         let pos = pos + self.offset;
 
-        let mut s = 0;
         for y in 0..sprite.height as usize * sprite.scale as usize {
             let i = pos.x as usize * 4
                 + pos.y as usize * self.width as usize * 4
@@ -84,8 +84,6 @@ impl Renderer {
                     }
                 }
             }
-
-            s += sprite.width * 4;
         }
     }
 
@@ -96,7 +94,6 @@ impl Renderer {
 
         let size_x = size_x / sprite.frame_num;
 
-        let mut s = 0;
         for y in 0..size_y as usize * sprite.scale as usize {
             let i = pos.x as usize * 4
                 + pos.y as usize * self.width as usize * 4
@@ -117,8 +114,6 @@ impl Renderer {
                     }
                 }
             }
-
-            s += size_x * 4;
         }
     }
 
@@ -126,7 +121,6 @@ impl Renderer {
         let (metrics, bitmap) = self.font.rasterize(char, size);
         let pos = pos + self.offset;
 
-        let mut s = 0;
         for y in 0..metrics.height {
             let i = pos.x as usize * 4
                 + pos.y as usize * self.width as usize * 4
@@ -143,8 +137,6 @@ impl Renderer {
                     }
                 }
             }
-
-            s += metrics.width * 4;
         }
     }
 
