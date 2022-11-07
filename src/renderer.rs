@@ -87,6 +87,33 @@ impl Renderer {
         }
     }
 
+    pub(crate) fn draw_sprite_colored(&mut self, pos: Vec2, sprite: &Sprite, color: [u8; 4]) {
+        let pos = pos + self.offset;
+
+        for y in 0..sprite.height as usize * sprite.scale as usize {
+            let i = pos.x as usize * 4
+                + pos.y as usize * self.width as usize * 4
+                + y * self.width as usize * 4;
+
+            for (sprite_index, chunk) in self.pixels.get_frame_mut()
+                [i..i + sprite.width as usize * 4 * sprite.scale as usize]
+                .chunks_mut(4)
+                .enumerate()
+            {
+                let x = sprite_index as u32 / sprite.scale as u32;
+                if sprite.image.get_pixel(x, y as u32 / sprite.scale as u32).0[3] > 0 {
+                    let data = color;
+
+                    if data[3] > 0 {
+                        for (col, pixel) in chunk.iter_mut().enumerate() {
+                            *pixel = data[col];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub(crate) fn draw_sprite_animated(&mut self, pos: Vec2, sprite: &Sprite, frame: u32) {
         let size_x = sprite.width as u32;
         let size_y = sprite.height as u32;
