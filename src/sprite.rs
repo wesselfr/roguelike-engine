@@ -21,6 +21,14 @@ impl Sprite {
         }
     }
 
+    pub(crate) fn flip_vertical(&mut self) {
+        self.image = self.image.flipv();
+    }
+
+    pub(crate) fn flip_horizontal(&mut self) {
+        self.image = self.image.fliph();
+    }
+
     pub(crate) fn from_grid(
         path: &str,
         x: u32,

@@ -31,6 +31,8 @@ bitflags! {
 pub struct Game {
     player_sprite: Sprite,
     test_tile: Sprite,
+    track_tile_normal: Sprite,
+    track_tile_flipped: Sprite,
     grid: [u8; GRID_WIDTH * GRID_HEIGHT],
     new_grid: [u8; GRID_WIDTH * GRID_HEIGHT],
     time_passed: f32,
@@ -42,12 +44,32 @@ impl Game {
             player_sprite: Sprite::from_image("assets/weapon_sword_1.png", Some(2.0)),
             test_tile: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
-                3,
-                2,
+                4,
+                0,
                 49,
                 22,
-                None,
+                Some(2.0),
             ),
+            track_tile_normal: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                0,
+                5,
+                49,
+                22,
+                Some(2.0),
+            ),
+            track_tile_flipped: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    0,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite.image = sprite.image.rotate90();
+                sprite
+            },
             grid: [0; GRID_WIDTH * GRID_HEIGHT],
             new_grid: [0; GRID_WIDTH * GRID_HEIGHT],
             time_passed: 0.0,
@@ -139,32 +161,37 @@ impl Game {
             [0x18, 0x7d, 0x0f, 0xff],
         );
 
-        renderer.draw_sprite_color(Vec2 { x: 20.0, y: 20.0 }, &self.test_tile, [0x00, 0xff, 0x00, 0xff]);
+        renderer.draw_sprite_color(
+            Vec2 { x: 20.0, y: 20.0 },
+            &self.test_tile,
+            [0x00, 0xff, 0x00, 0xff],
+        );
+
+        renderer.draw_sprite(Vec2 { x: 90.0, y: 20.0 }, &self.track_tile_normal);
+        renderer.draw_sprite(Vec2 { x: 150.0, y: 20.0 }, &self.track_tile_flipped);
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
                 if index % 2 == 0 {
-                    renderer.draw_char(
+                    renderer.draw_sprite_color(
                         GRID_OFFSET
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        '.',
-                        32.0,
+                        &self.test_tile,
                         TILE_COLOUR_A,
                     );
                 } else {
-                    renderer.draw_char(
+                    renderer.draw_sprite_color(
                         GRID_OFFSET
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        '.',
-                        32.0,
+                        &self.test_tile,
                         TILE_COLOUR_B,
                     );
                 }
