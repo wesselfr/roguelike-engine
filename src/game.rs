@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use crate::easing::*;
 use crate::renderer::Renderer;
 use crate::sprite::Sprite;
@@ -9,8 +11,8 @@ use winit_input_helper::WinitInputHelper;
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 480;
 
-const GRID_WIDTH: usize = 5;
-const GRID_HEIGHT: usize = 5;
+const GRID_WIDTH: usize = 10;
+const GRID_HEIGHT: usize = 10;
 
 const GRID_OFFSET: Vec2 = Vec2 { x: 100.0, y: 100.0 };
 
@@ -20,13 +22,15 @@ const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff];
 bitflags! {
     struct CellType: u8
     {
-        const PLAYER = 1 << 0;
-        const ENEMY = 1 << 1;
+        const PLAYER_MIDDLE = 1 << 2;
+        const PLAYER_FRONT = 1 << 3;
+        const ENEMY = 1 << 4;
     }
 }
 
 pub struct Game {
     player_sprite: Sprite,
+    test_tile: Sprite,
     grid: [u8; GRID_WIDTH * GRID_HEIGHT],
     new_grid: [u8; GRID_WIDTH * GRID_HEIGHT],
     time_passed: f32,
@@ -36,14 +40,15 @@ impl Game {
     pub(crate) fn new() -> Self {
         Self {
             player_sprite: Sprite::from_image("assets/weapon_sword_1.png", Some(2.0)),
-            grid: [0; 25],
-            new_grid: [0; 25],
+            test_tile: Sprite::from_grid("assets/monochrome-transparent_packed.png", 3, 2, 49, 22, None),
+            grid: [0; GRID_WIDTH*GRID_HEIGHT],
+            new_grid: [0; GRID_WIDTH*GRID_HEIGHT],
             time_passed: 0.0,
         }
     }
 
     pub(crate) fn reset(&mut self) {
-        self.grid[2] = CellType::PLAYER.bits;
+        self.grid[2] = CellType::PLAYER_FRONT.bits;
         self.grid[8] = CellType::ENEMY.bits;
     }
 
@@ -75,7 +80,7 @@ impl Game {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
-                if self.grid[index] == CellType::PLAYER.bits {
+                if self.grid[index] == CellType::PLAYER_FRONT.bits {
                     let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32
                         + x as i32
                         + player_dir_x) as usize;
@@ -88,11 +93,19 @@ impl Game {
                             && pos_y + player_dir_y >= 0
                             && pos_y + player_dir_y as i32 <= GRID_WIDTH as i32 - 1
                         {
-                            self.new_grid[index] = 0;
-                            self.new_grid[new_index] = CellType::PLAYER.bits;
+                            self.new_grid[index] = CellType::PLAYER_MIDDLE.bits;
+                            self.new_grid[new_index] = CellType::PLAYER_FRONT.bits;
                         }
                     } else {
-                        self.new_grid[index] = CellType::PLAYER.bits;
+                        self.new_grid[index] = CellType::PLAYER_FRONT.bits;
+                    }
+                } else if self.grid[index] > 0 && self.grid[index] <= CellType::PLAYER_MIDDLE.bits {
+
+                    if player_dir_x == 0 && player_dir_y == 0{
+                    self.new_grid[index] = self.grid[index];
+                    }
+                    else {
+                        self.new_grid[index] = self.grid[index] - 1;
                     }
                 } else if self.grid[index] == CellType::ENEMY.bits {
                     self.new_grid[index] = CellType::ENEMY.bits;
@@ -120,48 +133,61 @@ impl Game {
             24.0 * ease_out_back(text_animated_time),
             [0x18, 0x7d, 0x0f, 0xff],
         );
-        renderer.set_offset(Vec2::ONE * 5.0 * (self.time_passed * 3.0).sin());
 
-        // renderer.draw_square(
-        //     Vec2 { x: 50.0, y: 50.0 },
-        //     Vec2::ONE * 128.0 * ease_out_back(self.time_passed * 0.45 % 1.0),
-        //     [0x00, 0xff, 0x00, 0xff]
-        // );
+        renderer.draw_sprite(Vec2 { x: 20.0, y: 20.0 }, &self.test_tile);
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
                 if index % 2 == 0 {
-                    renderer.draw_square(
+                    renderer.draw_char(
                         GRID_OFFSET
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        Vec2::ONE * 32.0,
+                        '.',
+                        32.0,
                         TILE_COLOUR_A,
                     );
                 } else {
-                    renderer.draw_square(
+                    renderer.draw_char(
                         GRID_OFFSET
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        Vec2::ONE * 32.0,
+                        '.',
+                        32.0,
                         TILE_COLOUR_B,
                     );
                 }
 
-                if self.grid[index] == CellType::PLAYER.bits {
-                    renderer.draw_sprite(
+                if self.grid[index] == CellType::PLAYER_FRONT.bits
+                {
+                    renderer.draw_square(
                         GRID_OFFSET
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        &self.player_sprite,
+                        Vec2::ONE * 32.0,
+                        [0x00, 0xff, 0x00, 0xff]
+                    );
+                }
+
+                if self.grid[index] > 0 && self.grid[index] <= CellType::PLAYER_MIDDLE.bits
+                {
+                    renderer.draw_char(
+                        GRID_OFFSET
+                            + Vec2 {
+                                x: x as f32 * 32.0,
+                                y: y as f32 * 32.0,
+                            },
+                        'M',
+                        32.0,
+                        [0x55, 0x55, 0x55, 0xff]
                     );
                 }
 
