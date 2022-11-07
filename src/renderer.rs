@@ -87,7 +87,7 @@ impl Renderer {
         }
     }
 
-    pub(crate) fn draw_sprite_colored(&mut self, pos: Vec2, sprite: &Sprite, color: [u8; 4]) {
+    pub(crate) fn draw_sprite_color(&mut self, pos: Vec2, sprite: &Sprite, color: [u8; 4]) {
         let pos = pos + self.offset;
 
         for y in 0..sprite.height as usize * sprite.scale as usize {

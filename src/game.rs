@@ -139,7 +139,7 @@ impl Game {
             [0x18, 0x7d, 0x0f, 0xff],
         );
 
-        renderer.draw_sprite_colored(Vec2 { x: 20.0, y: 20.0 }, &self.test_tile, [0x00, 0xff, 0x00, 0xff]);
+        renderer.draw_sprite_color(Vec2 { x: 20.0, y: 20.0 }, &self.test_tile, [0x00, 0xff, 0x00, 0xff]);
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
