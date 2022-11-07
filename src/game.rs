@@ -1,8 +1,9 @@
-use bitflags::bitflags;
-use winit::event::VirtualKeyCode;
+use crate::easing::*;
 use crate::renderer::Renderer;
 use crate::sprite::Sprite;
+use bitflags::bitflags;
 use glam::Vec2;
+use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
 pub const WIDTH: u32 = 640;
@@ -41,8 +42,7 @@ impl Game {
         }
     }
 
-    pub(crate) fn reset(&mut self)
-    {
+    pub(crate) fn reset(&mut self) {
         self.grid[2] = CellType::PLAYER.bits;
         self.grid[8] = CellType::ENEMY.bits;
     }
@@ -94,9 +94,7 @@ impl Game {
                     } else {
                         self.new_grid[index] = CellType::PLAYER.bits;
                     }
-                }
-                else if self.grid[index] == CellType::ENEMY.bits
-                {
+                } else if self.grid[index] == CellType::ENEMY.bits {
                     self.new_grid[index] = CellType::ENEMY.bits;
                 }
             }
@@ -111,16 +109,24 @@ impl Game {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     pub(crate) fn draw(&self, renderer: &mut Renderer) {
-        renderer.clear_frame([0x00,0x00, 0x00, 0x00]);
+        renderer.clear_frame([0x00, 0x00, 0x00, 0x00]);
         renderer.set_offset(Vec2::ZERO);
+
+        let text_animated_time = (self.time_passed * 0.45).min(1.0);
         renderer.draw_text(
             Vec2 { x: 32.0, y: 32.0 },
-            "Hello World!",
-            32.0,
-            24.0,
-            [0xff, 0xff, 0xff, 0xff],
+            "Nuclear Train",
+            32.0 * ease_out_back(text_animated_time),
+            24.0 * ease_out_back(text_animated_time),
+            [0x18, 0x7d, 0x0f, 0xff],
         );
         renderer.set_offset(Vec2::ONE * 5.0 * (self.time_passed * 3.0).sin());
+
+        // renderer.draw_square(
+        //     Vec2 { x: 50.0, y: 50.0 },
+        //     Vec2::ONE * 128.0 * ease_out_back(self.time_passed * 0.45 % 1.0),
+        //     [0x00, 0xff, 0x00, 0xff]
+        // );
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
@@ -155,7 +161,7 @@ impl Game {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        &self.player_sprite
+                        &self.player_sprite,
                     );
                 }
 

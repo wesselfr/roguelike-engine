@@ -10,6 +10,7 @@ use crate::game::*;
 use crate::gui::Framework;
 use crate::renderer::*;
 
+mod easing;
 mod game;
 mod gui;
 mod renderer;
