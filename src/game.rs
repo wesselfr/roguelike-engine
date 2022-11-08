@@ -18,17 +18,29 @@ const GRID_HEIGHT: usize = 10;
 
 const GRID_OFFSET: Vec2 = Vec2 { x: 100.0, y: 100.0 };
 
+const CELL_TRACK_COLOR: [u8; 4] = [0x4c, 0x4c, 0x4c, 0xff];
 const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
 const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff];
 
 bitflags! {
-    struct CellType: u8
+    struct Directions: u8
+    {
+        const UP = 1 << 0;
+        const RIGHT = 1 << 1;
+        const DOWN = 1 << 2;
+        const LEFT = 1 << 3;
+    }
+}
+
+bitflags! {
+    struct CellType: u16
     {
         const EMPTY = 0 << 0;
         const PLAYER_MIDDLE = 1 << 2;
         const PLAYER_FRONT = 1 << 3;
         const ENEMY = 1 << 4;
         const TRACK = 1 << 5;
+        const TRACK_DIR_MAX = 1 << 9;
     }
 }
 
@@ -53,9 +65,15 @@ pub struct Game {
     test_tile: Sprite,
     track_tile_normal: Sprite,
     track_tile_flipped: Sprite,
+    track_tile_corner_t_r: Sprite,
+    track_tile_corner_t_l: Sprite,
+    track_tile_corner_b_r: Sprite,
+    track_tile_corner_b_l: Sprite,
+    track_tile_t_junction_normal: Sprite,
+    track_tile_t_junction_flipped: Sprite,
     grass_sprite: Sprite,
-    grid: [u8; GRID_WIDTH * GRID_HEIGHT],
-    new_grid: [u8; GRID_WIDTH * GRID_HEIGHT],
+    grid: [u16; GRID_WIDTH * GRID_HEIGHT],
+    new_grid: [u16; GRID_WIDTH * GRID_HEIGHT],
     time_passed: f32,
     move_timer: f32,
     move_interval: f32,
@@ -63,6 +81,70 @@ pub struct Game {
     last_dir_x: i32,
     last_dir_y: i32,
     train_test: Vec<Entity>,
+}
+
+fn get_index(x: u32, y: u32) -> u32 {
+    y * GRID_WIDTH as u32 + x
+}
+
+fn get_position(index: u32) -> (u32, u32) {
+    (index % GRID_WIDTH as u32, index / GRID_WIDTH as u32)
+}
+
+fn get_grid_cell_index(index: u32, grid: [u16; GRID_WIDTH * GRID_HEIGHT]) -> Option<u16> {
+    None
+}
+
+fn get_grid_cell_pos(x: u32, y: u32, grid: &[u16; GRID_WIDTH * GRID_HEIGHT]) -> Option<u16> {
+    if x > GRID_WIDTH as u32 || y > GRID_HEIGHT as u32 {
+        None
+    } else {
+        Some(grid[get_index(x, y) as usize])
+    }
+}
+
+fn evaluate_track_dir(index: u32, grid: &mut [u16; GRID_WIDTH * GRID_HEIGHT]) {
+    // Only evaluate for track
+    if (grid[index as usize] & CellType::TRACK.bits) > 0 {
+        let (pos_x, pos_y) = get_position(index);
+        let mut dir = 0;
+
+        let up = get_grid_cell_pos(pos_x, pos_y - 1, &grid);
+        let right = get_grid_cell_pos(pos_x + 1, pos_y, &grid);
+        let down = get_grid_cell_pos(pos_x, pos_y + 1, &grid);
+        let left = get_grid_cell_pos(pos_x - 1, pos_y, &grid);
+
+        if up.is_some() {
+            dir = if up.unwrap() & CellType::TRACK.bits > 0 {
+                dir | Directions::UP.bits
+            } else {
+                dir
+            };
+        }
+        if right.is_some() {
+            dir = if right.unwrap() & CellType::TRACK.bits > 0 {
+                dir | Directions::RIGHT.bits
+            } else {
+                dir
+            };
+        }
+        if down.is_some() {
+            dir = if down.unwrap() & CellType::TRACK.bits > 0 {
+                dir | Directions::DOWN.bits
+            } else {
+                dir
+            };
+        }
+        if left.is_some() {
+            dir = if left.unwrap() & CellType::TRACK.bits > 0 {
+                dir | Directions::LEFT.bits
+            } else {
+                dir
+            };
+        }
+
+        grid[index as usize] = grid[index as usize] | (dir as u16) << 6;
+    }
 }
 
 impl Game {
@@ -89,6 +171,73 @@ impl Game {
                 let mut sprite = Sprite::from_grid(
                     "assets/monochrome-transparent_packed.png",
                     0,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite.image = sprite.image.rotate90();
+                sprite
+            },
+            track_tile_corner_t_r: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    1,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite.flip_vertical();
+                sprite
+            },
+            track_tile_corner_t_l: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    1,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite.image = sprite.image.rotate180();
+                sprite
+            },
+            track_tile_corner_b_r: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    1,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite
+            },
+            track_tile_corner_b_l: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    1,
+                    5,
+                    49,
+                    22,
+                    Some(2.0),
+                );
+                sprite.flip_horizontal();
+                sprite
+            },
+            track_tile_t_junction_normal: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                2,
+                5,
+                49,
+                22,
+                Some(2.0),
+            ),
+            track_tile_t_junction_flipped: {
+                let mut sprite = Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    2,
                     5,
                     49,
                     22,
@@ -153,7 +302,9 @@ impl Game {
     }
 
     pub(crate) fn reset(&mut self) {
-        self.grid[20] = CellType::PLAYER_FRONT.bits;
+        let (px, py) = get_position(20);
+
+        self.grid[get_index(px, py) as usize] = CellType::PLAYER_FRONT.bits;
         self.grid[8] = CellType::ENEMY.bits;
 
         for i in 20..30 {
@@ -169,6 +320,11 @@ impl Game {
         self.grid[47] = self.grid[47] | CellType::TRACK.bits;
         for i in 45..47 {
             self.grid[i] = self.grid[i] | CellType::TRACK.bits;
+        }
+
+        // Evaluate all tracks
+        for i in 0..GRID_WIDTH * GRID_HEIGHT {
+            evaluate_track_dir(i as u32, &mut self.grid)
         }
     }
 
@@ -226,7 +382,6 @@ impl Game {
                         (self.grid[new_index] & CellType::TRACK.bits) == CellType::TRACK.bits;
 
                     if new_index != index && is_track {
-                        println!("IS TRACK {}", is_track);
                         let pos_x = x as i32;
                         let pos_y = y as i32;
                         if pos_x + player_dir_x >= 0
@@ -236,18 +391,17 @@ impl Game {
                         {
                             self.new_grid[index] = self.grid[index] | CellType::PLAYER_MIDDLE.bits;
                             self.new_grid[index] =
-                                self.new_grid[index] - CellType::PLAYER_FRONT.bits;
+                                self.new_grid[index] & !CellType::PLAYER_FRONT.bits;
 
                             self.new_grid[new_index] =
-                                self.grid[index] | CellType::PLAYER_FRONT.bits;
+                                self.grid[new_index] | CellType::PLAYER_FRONT.bits;
                         }
                     } else {
                         self.new_grid[index] = self.grid[index] | CellType::PLAYER_FRONT.bits;
                     }
                 } else if (self.grid[index] & 0b00000111) > 0 {
                     if player_dir_x != 0 || player_dir_y != 0 {
-                        self.new_grid[index] = self.grid[index] - 1;
-                        println!("NEW VALUE {}", self.new_grid[index]);
+                        self.new_grid[index] = (self.grid[index]) - 1;
                     } else {
                         self.new_grid[index] = self.new_grid[index] | self.grid[index];
                     }
@@ -328,17 +482,125 @@ impl Game {
                 }
 
                 if (self.grid[index] & CellType::TRACK.bits) > 0 {
-                    renderer.draw_sprite_color(
-                        GRID_OFFSET
-                            + Vec2 {
-                                x: x as f32 * 32.0,
-                                y: y as f32 * 32.0,
-                            },
-                        &self.track_tile_normal,
-                        [0x4c, 0x4c, 0x4c, 0xff],
-                    );
-                }
+                    let directions = (self.grid[index] >> 6) as u8;
 
+                    // Up - Down Direction
+                    if (directions & Directions::UP.bits) > 0
+                        && (directions & Directions::DOWN.bits) > 0
+                    {
+                        if (directions & Directions::RIGHT.bits) > 0 {
+                            renderer.draw_sprite_color(
+                                GRID_OFFSET
+                                    + Vec2 {
+                                        x: x as f32 * 32.0,
+                                        y: y as f32 * 32.0,
+                                    },
+                                &self.track_tile_t_junction_flipped,
+                                CELL_TRACK_COLOR,
+                            );
+                            continue;
+                        } else {
+                            renderer.draw_sprite_color(
+                                GRID_OFFSET
+                                    + Vec2 {
+                                        x: x as f32 * 32.0,
+                                        y: y as f32 * 32.0,
+                                    },
+                                &self.track_tile_normal,
+                                CELL_TRACK_COLOR,
+                            );
+                        }
+                    }
+                    // Right - left direction
+                    if (directions & Directions::RIGHT.bits) > 0
+                        && (directions & Directions::LEFT.bits) > 0
+                    {
+                        if (directions & Directions::DOWN.bits) > 0 {
+                            renderer.draw_sprite_color(
+                                GRID_OFFSET
+                                    + Vec2 {
+                                        x: x as f32 * 32.0,
+                                        y: y as f32 * 32.0,
+                                    },
+                                &self.track_tile_t_junction_flipped,
+                                CELL_TRACK_COLOR,
+                            );
+                            continue;
+                        } else {
+                            renderer.draw_sprite_color(
+                                GRID_OFFSET
+                                    + Vec2 {
+                                        x: x as f32 * 32.0,
+                                        y: y as f32 * 32.0,
+                                    },
+                                &self.track_tile_flipped,
+                                CELL_TRACK_COLOR,
+                            );
+                        }
+                    }
+
+                    // Corners
+                    // Up - Right
+                    if (directions & Directions::UP.bits) > 0
+                        && (directions & Directions::RIGHT.bits) > 0
+                    {
+                        renderer.draw_sprite_color(
+                            GRID_OFFSET
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.track_tile_corner_t_r,
+                            CELL_TRACK_COLOR,
+                        );
+                    }
+
+                    // Up - Left
+                    if (directions & Directions::UP.bits) > 0
+                        && (directions & Directions::LEFT.bits) > 0
+                    {
+                        renderer.draw_sprite_color(
+                            GRID_OFFSET
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.track_tile_corner_t_l,
+                            CELL_TRACK_COLOR,
+                        );
+                    }
+
+                    // Down - Right
+                    if (directions & Directions::DOWN.bits) > 0
+                        && (directions & Directions::RIGHT.bits) > 0
+                    {
+                        renderer.draw_sprite_color(
+                            GRID_OFFSET
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.track_tile_corner_b_r,
+                            CELL_TRACK_COLOR,
+                        );
+                    }
+
+                    // Down - Left
+                    if (directions & Directions::DOWN.bits) > 0
+                        && (directions & Directions::LEFT.bits) > 0
+                    {
+                        renderer.draw_sprite_color(
+                            GRID_OFFSET
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.track_tile_corner_b_l,
+                            CELL_TRACK_COLOR,
+                        );
+                    }
+                }
+                
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
                     renderer.draw_square(
                         GRID_OFFSET
@@ -349,18 +611,8 @@ impl Game {
                         Vec2::ONE * 32.0,
                         [0x00, 0xff, 0x00, 0xff],
                     );
+                    continue;
                 }
-
-                // if (self.grid[index] & CellType::PLAYER_MIDDLE.bits) > 0 {
-                //     renderer.draw_sprite(
-                //         GRID_OFFSET
-                //             + Vec2 {
-                //                 x: x as f32 * 32.0,
-                //                 y: y as f32 * 32.0,
-                //             },
-                //         &self.train_test[0].sprite,
-                //     );
-                // }
 
                 if (self.grid[index] & 0b00000111) > 0 {
                     renderer.draw_sprite(
