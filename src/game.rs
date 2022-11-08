@@ -498,7 +498,6 @@ impl Game {
                                 &self.track_tile_t_junction_flipped,
                                 CELL_TRACK_COLOR,
                             );
-                            continue;
                         } else {
                             renderer.draw_sprite_color(
                                 GRID_OFFSET
@@ -512,7 +511,7 @@ impl Game {
                         }
                     }
                     // Right - left direction
-                    if (directions & Directions::RIGHT.bits) > 0
+                    else if (directions & Directions::RIGHT.bits) > 0
                         && (directions & Directions::LEFT.bits) > 0
                     {
                         if (directions & Directions::DOWN.bits) > 0 {
@@ -525,7 +524,6 @@ impl Game {
                                 &self.track_tile_t_junction_flipped,
                                 CELL_TRACK_COLOR,
                             );
-                            continue;
                         } else {
                             renderer.draw_sprite_color(
                                 GRID_OFFSET
@@ -541,7 +539,7 @@ impl Game {
 
                     // Corners
                     // Up - Right
-                    if (directions & Directions::UP.bits) > 0
+                    else if (directions & Directions::UP.bits) > 0
                         && (directions & Directions::RIGHT.bits) > 0
                     {
                         renderer.draw_sprite_color(
@@ -556,7 +554,7 @@ impl Game {
                     }
 
                     // Up - Left
-                    if (directions & Directions::UP.bits) > 0
+                    else if (directions & Directions::UP.bits) > 0
                         && (directions & Directions::LEFT.bits) > 0
                     {
                         renderer.draw_sprite_color(
@@ -571,7 +569,7 @@ impl Game {
                     }
 
                     // Down - Right
-                    if (directions & Directions::DOWN.bits) > 0
+                    else if (directions & Directions::DOWN.bits) > 0
                         && (directions & Directions::RIGHT.bits) > 0
                     {
                         renderer.draw_sprite_color(
@@ -586,7 +584,7 @@ impl Game {
                     }
 
                     // Down - Left
-                    if (directions & Directions::DOWN.bits) > 0
+                    else if (directions & Directions::DOWN.bits) > 0
                         && (directions & Directions::LEFT.bits) > 0
                     {
                         renderer.draw_sprite_color(
@@ -600,7 +598,7 @@ impl Game {
                         );
                     }
                 }
-                
+
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
                     renderer.draw_square(
                         GRID_OFFSET
