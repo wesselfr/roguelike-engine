@@ -224,7 +224,7 @@ impl Game {
         Self {
             rng: rand::thread_rng(),
             initialized: false,
-            grid_offset: Vec2 { x: 100.0, y: 100.0 },
+            grid_offset: Vec2 { x: 112.0, y: 100.0 },
             player_sprite_right: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
                 11,
@@ -533,12 +533,20 @@ impl Game {
                             && pos_y + player_dir_y >= 0
                             && pos_y + player_dir_y as i32 <= GRID_WIDTH as i32 - 1
                         {
-                            let (enemy_pos_x, enemy_pos_y) = get_position(new_index as u32);
-                            self.enemy.pos = self.grid_offset
-                                + Vec2 {
-                                    x: enemy_pos_x as f32 * CELL_SIZE,
-                                    y: (enemy_pos_y + 1) as f32 * CELL_SIZE,
-                                };
+                            //let (enemy_pos_x, enemy_pos_y) = get_position(new_index as u32);
+
+                            // Update camera
+                            if self.grid_offset.x as i32 + pos_x * CELL_SIZE as i32
+                                > WIDTH as i32 / 2
+                            {
+                                self.grid_offset.x -= CELL_SIZE as f32;
+                            }
+
+                            // self.enemy.pos = self.grid_offset
+                            //     + Vec2 {
+                            //         x: enemy_pos_x as f32 * CELL_SIZE,
+                            //         y: (enemy_pos_y + 1) as f32 * CELL_SIZE,
+                            //     };
 
                             self.new_grid[index] = self.grid[index] | CellType::PLAYER_MIDDLE.bits;
                             self.new_grid[index] =
