@@ -66,7 +66,9 @@ pub struct Game {
     rng: ThreadRng,
     initialized: bool,
     grid_offset: Vec2,
-    player_sprite: Sprite,
+    player_sprite_right: Sprite,
+    player_sprite_up: Sprite,
+    player_sprite_down: Sprite,
     test_tile: Sprite,
     track_tile_normal: Sprite,
     track_tile_flipped: Sprite,
@@ -217,9 +219,25 @@ impl Game {
             rng: rand::thread_rng(),
             initialized: false,
             grid_offset: Vec2 { x: 100.0, y: 100.0 },
-            player_sprite: Sprite::from_grid(
+            player_sprite_right: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
                 11,
+                20,
+                49,
+                22,
+                Some(2.0),
+            ),
+            player_sprite_up: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                10,
+                20,
+                49,
+                22,
+                Some(2.0),
+            ),
+            player_sprite_down: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                9,
                 20,
                 49,
                 22,
@@ -440,19 +458,6 @@ impl Game {
             self.move_interval = self.move_interval.max(0.2);
         }
 
-        // if input.key_pressed(VirtualKeyCode::W) && self.last_dir_y != 1 {
-        //     player_dir_y = -1;
-        // }
-        // if input.key_pressed(VirtualKeyCode::S) && self.last_dir_y != -1 {
-        //     player_dir_y = 1;
-        // }
-        // if input.key_pressed(VirtualKeyCode::A) && self.last_dir_x != 1 {
-        //     player_dir_x = -1;
-        // }
-        // if input.key_pressed(VirtualKeyCode::D) && self.last_dir_x != -1 {
-        //     player_dir_x = 1;
-        // }
-
         // Auto Scroll
         //self.grid_offset.x = -(self.time_passed * 4.0 / 2.0).round() * CELL_SIZE as f32;
         if input.key_pressed(VirtualKeyCode::Up) {
@@ -482,8 +487,6 @@ impl Game {
                         (self.grid[new_index] & CellType::TRACK.bits) == CellType::TRACK.bits;
 
                     if new_index != index && !is_track {
-                        println!("DETECTED");
-                        let mut found = false;
                         let up =
                             get_grid_cell_pos((x as i32) as u32, (y as i32 - 1) as u32, &self.grid);
                         let right =
@@ -764,15 +767,34 @@ impl Game {
                 }
 
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
-                    renderer.draw_sprite(
-                        self.grid_offset
-                            + Vec2 {
-                                x: x as f32 * 32.0,
-                                y: y as f32 * 32.0,
-                            },
-                        &self.player_sprite,
-                    );
-                    //continue;
+                    if self.last_dir_x > 0 {
+                        renderer.draw_sprite(
+                            self.grid_offset
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.player_sprite_right,
+                        );
+                    } else if self.last_dir_y > 0 {
+                        renderer.draw_sprite(
+                            self.grid_offset
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.player_sprite_up,
+                        );
+                    } else {
+                        renderer.draw_sprite(
+                            self.grid_offset
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.player_sprite_down,
+                        );
+                    }
                 }
 
                 if (self.grid[index] & 0b00000111) > 0 {
