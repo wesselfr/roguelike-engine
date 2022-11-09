@@ -2,6 +2,7 @@ use crate::renderer::Renderer;
 use crate::sprite::Sprite;
 use crate::{easing::*, sprite};
 use bitflags::bitflags;
+use egui::lerp;
 use glam::Vec2;
 use rand::rngs::ThreadRng;
 use rand::Rng;
@@ -23,8 +24,8 @@ const GRID_HEIGHT: usize = ((HEIGHT / CELL_SIZE as u32) - 1) as usize;
 const CELL_TRACK_COLOR: [u8; 4] = [0x5e, 0x50, 0x2d, 0xff]; //5e502d
 const CELL_PLAYER_COLOR: [u8; 4] = [0x6b, 0xa0, 0x1a, 0xff]; // #6ba01a
 
-const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
-const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff]; // generates a float between 0 and 1
+const ENEMY_COLOR: [u8; 4] = [0x69, 0x11, 0x19, 0xff]; //#681119
+const BACKGROUND_COLOR: [u8; 4] = [0x7f, 0x6f, 0x0a, 0xff];
 
 bitflags! {
     struct Directions: u8
@@ -68,9 +69,13 @@ pub struct Game {
     rng: ThreadRng,
     initialized: bool,
     grid_offset: Vec2,
+
     player_sprite_right: Sprite,
     player_sprite_up: Sprite,
     player_sprite_down: Sprite,
+
+    enemy: Entity,
+
     test_tile: Sprite,
     track_tile_normal: Sprite,
     track_tile_flipped: Sprite,
@@ -244,6 +249,17 @@ impl Game {
                 22,
                 Some(2.0),
             ),
+            enemy: Entity::new(
+                Vec2 { x: 50.0, y: 50.0 },
+                Sprite::from_grid(
+                    "assets/monochrome-transparent_packed.png",
+                    26,
+                    0,
+                    49,
+                    22,
+                    Some(2.0),
+                ),
+            ),
             test_tile: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
                 38,
@@ -403,26 +419,8 @@ impl Game {
     }
 
     pub(crate) fn reset(&mut self) {
-        //let (px, py) = get_position(20);
-
         self.grid[get_index(0, 5) as usize] = CellType::PLAYER_FRONT.bits;
-
         gen_track(0, 5, &mut self.grid, &mut self.rng, false);
-
-        // for i in 20..30 {
-        //     self.grid[i] = self.grid[i] | CellType::TRACK.bits;
-        // }
-
-        // self.grid[24] = self.grid[24] | CellType::TRACK.bits;
-        // self.grid[34] = self.grid[34] | CellType::TRACK.bits;
-        // self.grid[44] = self.grid[44] | CellType::TRACK.bits;
-
-        // self.grid[27] = self.grid[27] | CellType::TRACK.bits;
-        // self.grid[37] = self.grid[37] | CellType::TRACK.bits;
-        // self.grid[47] = self.grid[47] | CellType::TRACK.bits;
-        // for i in 45..47 {
-        //     self.grid[i] = self.grid[i] | CellType::TRACK.bits;
-        // }
 
         // Evaluate all tracks
         for i in 0..GRID_WIDTH * GRID_HEIGHT {
@@ -535,6 +533,13 @@ impl Game {
                             && pos_y + player_dir_y >= 0
                             && pos_y + player_dir_y as i32 <= GRID_WIDTH as i32 - 1
                         {
+                            let (enemy_pos_x, enemy_pos_y) = get_position(new_index as u32);
+                            self.enemy.pos = self.grid_offset
+                                + Vec2 {
+                                    x: enemy_pos_x as f32 * CELL_SIZE,
+                                    y: (enemy_pos_y + 1) as f32 * CELL_SIZE,
+                                };
+
                             self.new_grid[index] = self.grid[index] | CellType::PLAYER_MIDDLE.bits;
                             self.new_grid[index] =
                                 self.new_grid[index] & !CellType::PLAYER_FRONT.bits;
@@ -572,7 +577,6 @@ impl Game {
             self.last_dir_y = player_dir_y;
         }
 
-        //let mut old_pos = self.train_test[0].pos - self.train_test[0].vel * 32.0;
         let mut old_vel = self.train_test[0].vel;
         self.train_test[0].pos = self.train_test[0].pos + self.train_test[0].vel;
         for cart in self.train_test.iter_mut().skip(1) {
@@ -586,36 +590,20 @@ impl Game {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     pub(crate) fn draw(&self, renderer: &mut Renderer) {
-        //renderer.clear_frame([0x00, 0x00, 0x00, 0x00]);
-        renderer.clear_frame([0x7f, 0x6f, 0x0a, 0xff]);
+        renderer.clear_frame(BACKGROUND_COLOR);
         renderer.set_offset(Vec2::ZERO);
 
         let text_animated_time = (self.time_passed * 0.45).min(1.0);
         renderer.draw_text(
-            Vec2 { x: 32.0, y: 32.0 },
+            Vec2 {
+                x: 0.0,
+                y: -CELL_SIZE,
+            } + self.grid_offset,
             "Nuclear Train",
+            48.0 * ease_out_back(text_animated_time),
             32.0 * ease_out_back(text_animated_time),
-            24.0 * ease_out_back(text_animated_time),
-            [0x18, 0x7d, 0x0f, 0xff],
+            [0xff, 0xff, 0xff, 0xff],
         );
-
-        // for cart in &self.train_test {
-        //     renderer.draw_sprite(cart.pos, &cart.sprite);
-        // }
-
-        let info = format!("Interval {}", self.move_interval);
-        renderer.draw_text(
-            Vec2 { x: 32.0, y: 60.0 },
-            &info,
-            32.0,
-            24.0,
-            [0x18, 0x7d, 0x0f, 0xff],
-        );
-
-        renderer.set_offset(Vec2 {
-            x: CELL_SIZE,
-            y: CELL_SIZE,
-        });
 
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
@@ -811,6 +799,8 @@ impl Game {
                     );
                 }
             }
+
+            renderer.draw_sprite_color(self.enemy.pos, &self.enemy.sprite, ENEMY_COLOR)
         }
     }
 }

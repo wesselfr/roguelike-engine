@@ -148,19 +148,22 @@ impl Renderer {
         let (metrics, bitmap) = self.font.rasterize(char, size);
         let pos = pos + self.offset;
 
-        for y in 0..metrics.height {
-            let i = pos.x as usize * 4
-                + pos.y as usize * self.width as usize * 4
-                + y * self.width as usize * 4;
+        // Hack: Added to have scrolling text at the start of the game.
+        if pos.x > 0.0 && pos.y > 0.0 {
+            for y in 0..metrics.height {
+                let i = pos.x as usize * 4
+                    + pos.y as usize * self.width as usize * 4
+                    + y * self.width as usize * 4;
 
-            for (bitmap_index, chunk) in self.pixels.get_frame_mut()[i..i + metrics.width * 4]
-                .chunks_mut(4)
-                .enumerate()
-            {
-                let bitmap_index = bitmap_index + y * metrics.width;
-                if bitmap[bitmap_index] > 0 {
-                    for (col, pixel) in chunk.iter_mut().enumerate() {
-                        *pixel = color[col];
+                for (bitmap_index, chunk) in self.pixels.get_frame_mut()[i..i + metrics.width * 4]
+                    .chunks_mut(4)
+                    .enumerate()
+                {
+                    let bitmap_index = bitmap_index + y * metrics.width;
+                    if bitmap[bitmap_index] > 0 {
+                        for (col, pixel) in chunk.iter_mut().enumerate() {
+                            *pixel = color[col];
+                        }
                     }
                 }
             }
