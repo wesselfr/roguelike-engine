@@ -13,10 +13,10 @@ const TILESHEET: &str = "assets/monochrome-transparent_packed.png";
 const TILESHEET_MAX_X: u32 = 49;
 const TILESHEET_MAX_Y: u32 = 22;
 
-const GRID_WIDTH: usize = 10;
-const GRID_HEIGHT: usize = 10;
+const GRID_WIDTH: usize = 50;
+const GRID_HEIGHT: usize = 50;
 
-const GRID_OFFSET: Vec2 = Vec2 { x: 100.0, y: 100.0 };
+const CELL_SIZE: u32 = 16 * 2;
 
 const CELL_TRACK_COLOR: [u8; 4] = [0x4c, 0x4c, 0x4c, 0xff];
 const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
@@ -61,6 +61,7 @@ impl Entity {
 }
 
 pub struct Game {
+    grid_offset: Vec2,
     player_sprite: Sprite,
     test_tile: Sprite,
     track_tile_normal: Sprite,
@@ -71,6 +72,7 @@ pub struct Game {
     track_tile_corner_b_l: Sprite,
     track_tile_t_junction_normal: Sprite,
     track_tile_t_junction_flipped: Sprite,
+    track_tile_crossing: Sprite,
     grass_sprite: Sprite,
     grid: [u16; GRID_WIDTH * GRID_HEIGHT],
     new_grid: [u16; GRID_WIDTH * GRID_HEIGHT],
@@ -150,6 +152,7 @@ fn evaluate_track_dir(index: u32, grid: &mut [u16; GRID_WIDTH * GRID_HEIGHT]) {
 impl Game {
     pub(crate) fn new() -> Self {
         Self {
+            grid_offset: Vec2 { x: 100.0, y: 100.0 },
             player_sprite: Sprite::from_image("assets/weapon_sword_1.png", Some(2.0)),
             test_tile: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
@@ -246,6 +249,14 @@ impl Game {
                 sprite.image = sprite.image.rotate90();
                 sprite
             },
+            track_tile_crossing: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                3,
+                5,
+                49,
+                22,
+                Some(2.0),
+            ),
             grass_sprite: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
                 5,
@@ -305,7 +316,6 @@ impl Game {
         let (px, py) = get_position(20);
 
         self.grid[get_index(px, py) as usize] = CellType::PLAYER_FRONT.bits;
-        self.grid[8] = CellType::ENEMY.bits;
 
         for i in 20..30 {
             self.grid[i] = self.grid[i] | CellType::TRACK.bits;
@@ -367,6 +377,21 @@ impl Game {
         }
         if input.key_pressed(VirtualKeyCode::D) && self.last_dir_x != -1 {
             player_dir_x = 1;
+        }
+
+        // Auto Scroll
+        //self.grid_offset.x = -(self.time_passed * 4.0 / 2.0).round() * CELL_SIZE as f32;
+        if input.key_pressed(VirtualKeyCode::Up) {
+            self.grid_offset.y += CELL_SIZE as f32;
+        }
+        if input.key_pressed(VirtualKeyCode::Down) {
+            self.grid_offset.y -= CELL_SIZE as f32;
+        }
+        if input.key_pressed(VirtualKeyCode::Left) {
+            self.grid_offset.x += CELL_SIZE as f32;
+        }
+        if input.key_pressed(VirtualKeyCode::Right) {
+            self.grid_offset.x -= CELL_SIZE as f32;
         }
 
         for y in 0..GRID_HEIGHT {
@@ -469,15 +494,23 @@ impl Game {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
+                if self.grid_offset.x + (x as f32) * (CELL_SIZE as f32) < 0.0
+                    || self.grid_offset.x + (x as f32) * CELL_SIZE as f32 > WIDTH as f32 - CELL_SIZE as f32
+                    || self.grid_offset.y + (y as f32) * (CELL_SIZE as f32) < 0.0
+                    || self.grid_offset.y + (y as f32) * CELL_SIZE as f32 > HEIGHT as f32 - CELL_SIZE as f32
+                {
+                    continue;
+                }
+
                 if self.grid[index] == CellType::EMPTY.bits {
                     renderer.draw_sprite_color(
-                        GRID_OFFSET
+                        self.grid_offset
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
                         &self.grass_sprite,
-                        [0x23, 0xcc, 0x10, 0xff],
+                        [0xcc, 0xb2, 0x10, 0xff],
                     );
                 }
 
@@ -490,7 +523,7 @@ impl Game {
                     {
                         if (directions & Directions::RIGHT.bits) > 0 {
                             renderer.draw_sprite_color(
-                                GRID_OFFSET
+                                self.grid_offset
                                     + Vec2 {
                                         x: x as f32 * 32.0,
                                         y: y as f32 * 32.0,
@@ -500,7 +533,7 @@ impl Game {
                             );
                         } else {
                             renderer.draw_sprite_color(
-                                GRID_OFFSET
+                                self.grid_offset
                                     + Vec2 {
                                         x: x as f32 * 32.0,
                                         y: y as f32 * 32.0,
@@ -516,7 +549,7 @@ impl Game {
                     {
                         if (directions & Directions::DOWN.bits) > 0 {
                             renderer.draw_sprite_color(
-                                GRID_OFFSET
+                                self.grid_offset
                                     + Vec2 {
                                         x: x as f32 * 32.0,
                                         y: y as f32 * 32.0,
@@ -526,7 +559,7 @@ impl Game {
                             );
                         } else {
                             renderer.draw_sprite_color(
-                                GRID_OFFSET
+                                self.grid_offset
                                     + Vec2 {
                                         x: x as f32 * 32.0,
                                         y: y as f32 * 32.0,
@@ -536,14 +569,13 @@ impl Game {
                             );
                         }
                     }
-
                     // Corners
                     // Up - Right
                     else if (directions & Directions::UP.bits) > 0
                         && (directions & Directions::RIGHT.bits) > 0
                     {
                         renderer.draw_sprite_color(
-                            GRID_OFFSET
+                            self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
@@ -552,13 +584,12 @@ impl Game {
                             CELL_TRACK_COLOR,
                         );
                     }
-
                     // Up - Left
                     else if (directions & Directions::UP.bits) > 0
                         && (directions & Directions::LEFT.bits) > 0
                     {
                         renderer.draw_sprite_color(
-                            GRID_OFFSET
+                            self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
@@ -567,13 +598,12 @@ impl Game {
                             CELL_TRACK_COLOR,
                         );
                     }
-
                     // Down - Right
                     else if (directions & Directions::DOWN.bits) > 0
                         && (directions & Directions::RIGHT.bits) > 0
                     {
                         renderer.draw_sprite_color(
-                            GRID_OFFSET
+                            self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
@@ -582,13 +612,12 @@ impl Game {
                             CELL_TRACK_COLOR,
                         );
                     }
-
                     // Down - Left
                     else if (directions & Directions::DOWN.bits) > 0
                         && (directions & Directions::LEFT.bits) > 0
                     {
                         renderer.draw_sprite_color(
-                            GRID_OFFSET
+                            self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
@@ -596,12 +625,22 @@ impl Game {
                             &self.track_tile_corner_b_l,
                             CELL_TRACK_COLOR,
                         );
+                    } else {
+                        renderer.draw_sprite_color(
+                            self.grid_offset
+                                + Vec2 {
+                                    x: x as f32 * 32.0,
+                                    y: y as f32 * 32.0,
+                                },
+                            &self.track_tile_crossing,
+                            CELL_TRACK_COLOR,
+                        );
                     }
                 }
 
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
                     renderer.draw_square(
-                        GRID_OFFSET
+                        self.grid_offset
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
@@ -614,7 +653,7 @@ impl Game {
 
                 if (self.grid[index] & 0b00000111) > 0 {
                     renderer.draw_sprite(
-                        GRID_OFFSET
+                        self.grid_offset
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
