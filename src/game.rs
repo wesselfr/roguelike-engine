@@ -137,7 +137,6 @@ fn gen_track(
             let y_pos = y as i32 + dir * i;
 
             if y_pos <= 0 || y_pos >= (GRID_HEIGHT as i32) - 1 {
-                println!("TRIGGERED");
                 should_gen = false;
                 break;
             }
@@ -497,7 +496,6 @@ impl Game {
                         if self.last_dir_x > 0 {
                             if up.is_some() {
                                 if up.unwrap() & CellType::TRACK.bits > 0 {
-                                    println!("UP");
                                     new_index = get_index((x as i32) as u32, (y as i32 - 1) as u32)
                                         as usize;
                                     player_dir_x = 0;
@@ -507,7 +505,6 @@ impl Game {
                             }
                             if down.is_some() {
                                 if down.unwrap() & CellType::TRACK.bits > 0 {
-                                    println!("DOWN");
                                     player_dir_x = 0;
                                     player_dir_y = 1;
                                     new_index = get_index((x as i32) as u32, (y as i32 + 1) as u32)
@@ -518,7 +515,6 @@ impl Game {
                         } else {
                             if right.is_some() {
                                 if right.unwrap() & CellType::TRACK.bits > 0 {
-                                    println!("RIGHT");
                                     player_dir_x = 1;
                                     player_dir_y = 0;
                                     new_index = get_index((x as i32 + 1) as u32, (y as i32) as u32)
