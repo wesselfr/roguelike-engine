@@ -20,7 +20,9 @@ const CELL_SIZE: f32 = 16.0 * 2.0;
 const GRID_WIDTH: usize = 50;
 const GRID_HEIGHT: usize = ((HEIGHT / CELL_SIZE as u32) - 1) as usize;
 
-const CELL_TRACK_COLOR: [u8; 4] = [0x4c, 0x4c, 0x4c, 0xff];
+const CELL_TRACK_COLOR: [u8; 4] = [0x5e, 0x50, 0x2d, 0xff]; //5e502d
+const CELL_PLAYER_COLOR: [u8; 4] = [0x6b, 0xa0, 0x1a, 0xff]; // #6ba01a
+
 const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
 const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff]; // generates a float between 0 and 1
 
@@ -584,7 +586,8 @@ impl Game {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     pub(crate) fn draw(&self, renderer: &mut Renderer) {
-        renderer.clear_frame([0x00, 0x00, 0x00, 0x00]);
+        //renderer.clear_frame([0x00, 0x00, 0x00, 0x00]);
+        renderer.clear_frame([0x7f, 0x6f, 0x0a, 0xff]);
         renderer.set_offset(Vec2::ZERO);
 
         let text_animated_time = (self.time_passed * 0.45).min(1.0);
@@ -764,43 +767,47 @@ impl Game {
 
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
                     if self.last_dir_x > 0 {
-                        renderer.draw_sprite(
+                        renderer.draw_sprite_color(
                             self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
                                 },
                             &self.player_sprite_right,
+                            CELL_PLAYER_COLOR,
                         );
                     } else if self.last_dir_y > 0 {
-                        renderer.draw_sprite(
+                        renderer.draw_sprite_color(
                             self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
                                 },
                             &self.player_sprite_up,
+                            CELL_PLAYER_COLOR,
                         );
                     } else {
-                        renderer.draw_sprite(
+                        renderer.draw_sprite_color(
                             self.grid_offset
                                 + Vec2 {
                                     x: x as f32 * 32.0,
                                     y: y as f32 * 32.0,
                                 },
                             &self.player_sprite_down,
+                            CELL_PLAYER_COLOR,
                         );
                     }
                 }
 
                 if (self.grid[index] & 0b00000111) > 0 {
-                    renderer.draw_sprite(
+                    renderer.draw_sprite_color(
                         self.grid_offset
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
                         &self.train_test[0].sprite,
+                        CELL_PLAYER_COLOR,
                     );
                 }
             }
