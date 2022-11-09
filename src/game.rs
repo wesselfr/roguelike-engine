@@ -3,6 +3,8 @@ use crate::sprite::Sprite;
 use crate::{easing::*, sprite};
 use bitflags::bitflags;
 use glam::Vec2;
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
@@ -13,14 +15,14 @@ const TILESHEET: &str = "assets/monochrome-transparent_packed.png";
 const TILESHEET_MAX_X: u32 = 49;
 const TILESHEET_MAX_Y: u32 = 22;
 
-const GRID_WIDTH: usize = 50;
-const GRID_HEIGHT: usize = 50;
+const CELL_SIZE: f32 = 16.0 * 2.0;
 
-const CELL_SIZE: u32 = 16 * 2;
+const GRID_WIDTH: usize = 50;
+const GRID_HEIGHT: usize = ((HEIGHT / CELL_SIZE as u32) - 1) as usize;
 
 const CELL_TRACK_COLOR: [u8; 4] = [0x4c, 0x4c, 0x4c, 0xff];
 const TILE_COLOUR_A: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
-const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff];
+const TILE_COLOUR_B: [u8; 4] = [0x00, 0x00, 0xff, 0xff]; // generates a float between 0 and 1
 
 bitflags! {
     struct Directions: u8
@@ -61,6 +63,8 @@ impl Entity {
 }
 
 pub struct Game {
+    rng: ThreadRng,
+    initialized: bool,
     grid_offset: Vec2,
     player_sprite: Sprite,
     test_tile: Sprite,
@@ -89,19 +93,77 @@ fn get_index(x: u32, y: u32) -> u32 {
     y * GRID_WIDTH as u32 + x
 }
 
+fn index_in_grid(index: u32) -> bool {
+    index > 0 && index < (GRID_WIDTH * GRID_HEIGHT) as u32
+}
+
 fn get_position(index: u32) -> (u32, u32) {
     (index % GRID_WIDTH as u32, index / GRID_WIDTH as u32)
 }
 
-fn get_grid_cell_index(index: u32, grid: [u16; GRID_WIDTH * GRID_HEIGHT]) -> Option<u16> {
-    None
+fn get_grid_cell_pos(x: u32, y: u32, grid: &[u16; GRID_WIDTH * GRID_HEIGHT]) -> Option<u16> {
+    let index = get_index(x, y);
+    if index_in_grid(index) {
+        Some(grid[index as usize])
+    } else {
+        None
+    }
 }
 
-fn get_grid_cell_pos(x: u32, y: u32, grid: &[u16; GRID_WIDTH * GRID_HEIGHT]) -> Option<u16> {
-    if x > GRID_WIDTH as u32 || y > GRID_HEIGHT as u32 {
-        None
-    } else {
-        Some(grid[get_index(x, y) as usize])
+fn gen_track(
+    x: u32,
+    y: u32,
+    grid: &mut [u16; GRID_WIDTH * GRID_HEIGHT],
+    rng: &mut ThreadRng,
+    make_corner: bool,
+) {
+    let lenght = rng.gen_range(3..12);
+
+    let mut dir = 1;
+    if make_corner {
+        let down = rng.gen_bool(0.5);
+        dir = if down { 1 } else { -1 };
+    }
+
+    let mut last_index = 0;
+    let mut should_gen = true;
+    for i in 0..lenght {
+        if !should_gen {
+            return;
+        }
+        if make_corner {
+            let y_pos = y as i32 + dir * i;
+
+            if y_pos <= 0 || y_pos >= (GRID_HEIGHT as i32) - 1 {
+                println!("TRIGGERED");
+                should_gen = false;
+                break;
+            }
+
+            let index = get_index(x, y_pos as u32) as usize;
+            if index_in_grid(index as u32) {
+                grid[index] = grid[index] | CellType::TRACK.bits;
+                last_index = index;
+            } else {
+                should_gen = false;
+                break;
+            }
+        } else {
+            let index = get_index(x + i as u32, y) as usize;
+            if index_in_grid(index as u32) {
+                grid[index] = grid[index] | CellType::TRACK.bits;
+                last_index = index;
+            } else {
+                should_gen = false;
+                break;
+            }
+        }
+    }
+
+    let (new_x, new_y) = get_position(last_index as u32);
+
+    if new_x < 45 && new_y > 0 && new_y < GRID_HEIGHT as u32 - 1 {
+        return gen_track(new_x, new_y, grid, rng, !make_corner);
     }
 }
 
@@ -152,8 +214,17 @@ fn evaluate_track_dir(index: u32, grid: &mut [u16; GRID_WIDTH * GRID_HEIGHT]) {
 impl Game {
     pub(crate) fn new() -> Self {
         Self {
+            rng: rand::thread_rng(),
+            initialized: false,
             grid_offset: Vec2 { x: 100.0, y: 100.0 },
-            player_sprite: Sprite::from_image("assets/weapon_sword_1.png", Some(2.0)),
+            player_sprite: Sprite::from_grid(
+                "assets/monochrome-transparent_packed.png",
+                11,
+                20,
+                49,
+                22,
+                Some(2.0),
+            ),
             test_tile: Sprite::from_grid(
                 "assets/monochrome-transparent_packed.png",
                 38,
@@ -313,24 +384,26 @@ impl Game {
     }
 
     pub(crate) fn reset(&mut self) {
-        let (px, py) = get_position(20);
+        //let (px, py) = get_position(20);
 
-        self.grid[get_index(px, py) as usize] = CellType::PLAYER_FRONT.bits;
+        self.grid[get_index(0, 5) as usize] = CellType::PLAYER_FRONT.bits;
 
-        for i in 20..30 {
-            self.grid[i] = self.grid[i] | CellType::TRACK.bits;
-        }
+        gen_track(0, 5, &mut self.grid, &mut self.rng, false);
 
-        self.grid[24] = self.grid[24] | CellType::TRACK.bits;
-        self.grid[34] = self.grid[34] | CellType::TRACK.bits;
-        self.grid[44] = self.grid[44] | CellType::TRACK.bits;
+        // for i in 20..30 {
+        //     self.grid[i] = self.grid[i] | CellType::TRACK.bits;
+        // }
 
-        self.grid[27] = self.grid[27] | CellType::TRACK.bits;
-        self.grid[37] = self.grid[37] | CellType::TRACK.bits;
-        self.grid[47] = self.grid[47] | CellType::TRACK.bits;
-        for i in 45..47 {
-            self.grid[i] = self.grid[i] | CellType::TRACK.bits;
-        }
+        // self.grid[24] = self.grid[24] | CellType::TRACK.bits;
+        // self.grid[34] = self.grid[34] | CellType::TRACK.bits;
+        // self.grid[44] = self.grid[44] | CellType::TRACK.bits;
+
+        // self.grid[27] = self.grid[27] | CellType::TRACK.bits;
+        // self.grid[37] = self.grid[37] | CellType::TRACK.bits;
+        // self.grid[47] = self.grid[47] | CellType::TRACK.bits;
+        // for i in 45..47 {
+        //     self.grid[i] = self.grid[i] | CellType::TRACK.bits;
+        // }
 
         // Evaluate all tracks
         for i in 0..GRID_WIDTH * GRID_HEIGHT {
@@ -341,8 +414,9 @@ impl Game {
     /// Update the `World` internal state; bounce the box around the screen.
     pub(crate) fn update(&mut self, input: &mut WinitInputHelper, dt: f32) {
         // Todo: Remove this way of initialization.
-        if self.time_passed == 0.0 {
-            self.reset()
+        if !self.initialized {
+            self.reset();
+            self.initialized = true;
         };
         self.time_passed += dt;
         self.move_timer += dt;
@@ -357,27 +431,27 @@ impl Game {
             self.move_timer = 0.0;
         }
 
-        if input.key_pressed(VirtualKeyCode::Q) {
-            self.move_interval += 0.5;
+        if input.key_pressed(VirtualKeyCode::S) {
+            self.move_interval += 0.2;
             self.move_interval = self.move_interval.min(3.0);
         }
-        if input.key_pressed(VirtualKeyCode::E) {
-            self.move_interval -= 0.5;
+        if input.key_pressed(VirtualKeyCode::W) {
+            self.move_interval -= 0.2;
             self.move_interval = self.move_interval.max(0.2);
         }
 
-        if input.key_pressed(VirtualKeyCode::W) && self.last_dir_y != 1 {
-            player_dir_y = -1;
-        }
-        if input.key_pressed(VirtualKeyCode::S) && self.last_dir_y != -1 {
-            player_dir_y = 1;
-        }
-        if input.key_pressed(VirtualKeyCode::A) && self.last_dir_x != 1 {
-            player_dir_x = -1;
-        }
-        if input.key_pressed(VirtualKeyCode::D) && self.last_dir_x != -1 {
-            player_dir_x = 1;
-        }
+        // if input.key_pressed(VirtualKeyCode::W) && self.last_dir_y != 1 {
+        //     player_dir_y = -1;
+        // }
+        // if input.key_pressed(VirtualKeyCode::S) && self.last_dir_y != -1 {
+        //     player_dir_y = 1;
+        // }
+        // if input.key_pressed(VirtualKeyCode::A) && self.last_dir_x != 1 {
+        //     player_dir_x = -1;
+        // }
+        // if input.key_pressed(VirtualKeyCode::D) && self.last_dir_x != -1 {
+        //     player_dir_x = 1;
+        // }
 
         // Auto Scroll
         //self.grid_offset.x = -(self.time_passed * 4.0 / 2.0).round() * CELL_SIZE as f32;
@@ -399,12 +473,58 @@ impl Game {
                 let index = y * GRID_WIDTH + x;
 
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
-                    let new_index = ((y as i32 + player_dir_y) * GRID_WIDTH as i32
-                        + x as i32
-                        + player_dir_x) as usize;
+                    let mut new_index = get_index(
+                        (x as i32 + player_dir_x) as u32,
+                        (y as i32 + player_dir_y) as u32,
+                    ) as usize;
 
-                    let is_track =
+                    let mut is_track =
                         (self.grid[new_index] & CellType::TRACK.bits) == CellType::TRACK.bits;
+
+                    if new_index != index && !is_track {
+                        println!("DETECTED");
+                        let mut found = false;
+                        let up =
+                            get_grid_cell_pos((x as i32) as u32, (y as i32 - 1) as u32, &self.grid);
+                        let right =
+                            get_grid_cell_pos((x as i32 + 1) as u32, (y as i32) as u32, &self.grid);
+                        let down =
+                            get_grid_cell_pos((x as i32) as u32, (y as i32 + 1) as u32, &self.grid);
+
+                        if self.last_dir_x > 0 {
+                            if up.is_some() {
+                                if up.unwrap() & CellType::TRACK.bits > 0 {
+                                    println!("UP");
+                                    new_index = get_index((x as i32) as u32, (y as i32 - 1) as u32)
+                                        as usize;
+                                    player_dir_x = 0;
+                                    player_dir_y = -1;
+                                    is_track = true;
+                                }
+                            }
+                            if down.is_some() {
+                                if down.unwrap() & CellType::TRACK.bits > 0 {
+                                    println!("DOWN");
+                                    player_dir_x = 0;
+                                    player_dir_y = 1;
+                                    new_index = get_index((x as i32) as u32, (y as i32 + 1) as u32)
+                                        as usize;
+                                    is_track = true;
+                                }
+                            }
+                        } else {
+                            if right.is_some() {
+                                if right.unwrap() & CellType::TRACK.bits > 0 {
+                                    println!("RIGHT");
+                                    player_dir_x = 1;
+                                    player_dir_y = 0;
+                                    new_index = get_index((x as i32 + 1) as u32, (y as i32) as u32)
+                                        as usize;
+                                    is_track = true;
+                                }
+                            }
+                        }
+                    }
 
                     if new_index != index && is_track {
                         let pos_x = x as i32;
@@ -490,14 +610,19 @@ impl Game {
             [0x18, 0x7d, 0x0f, 0xff],
         );
 
+        renderer.set_offset(Vec2 {
+            x: CELL_SIZE,
+            y: CELL_SIZE,
+        });
+
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
                 let index = y * GRID_WIDTH + x;
 
-                if self.grid_offset.x + (x as f32) * (CELL_SIZE as f32) < 0.0
-                    || self.grid_offset.x + (x as f32) * CELL_SIZE as f32 > WIDTH as f32 - CELL_SIZE as f32
-                    || self.grid_offset.y + (y as f32) * (CELL_SIZE as f32) < 0.0
-                    || self.grid_offset.y + (y as f32) * CELL_SIZE as f32 > HEIGHT as f32 - CELL_SIZE as f32
+                if self.grid_offset.x + (x as f32) * CELL_SIZE < 0.0
+                    || self.grid_offset.x + (x as f32) * CELL_SIZE + CELL_SIZE > WIDTH as f32
+                    || self.grid_offset.y + (y as f32) * CELL_SIZE < 0.0
+                    || self.grid_offset.y + (y as f32) * CELL_SIZE + CELL_SIZE > HEIGHT as f32
                 {
                     continue;
                 }
@@ -639,16 +764,15 @@ impl Game {
                 }
 
                 if (self.grid[index] & CellType::PLAYER_FRONT.bits) > 0 {
-                    renderer.draw_square(
+                    renderer.draw_sprite(
                         self.grid_offset
                             + Vec2 {
                                 x: x as f32 * 32.0,
                                 y: y as f32 * 32.0,
                             },
-                        Vec2::ONE * 32.0,
-                        [0x00, 0xff, 0x00, 0xff],
+                        &self.player_sprite,
                     );
-                    continue;
+                    //continue;
                 }
 
                 if (self.grid[index] & 0b00000111) > 0 {
