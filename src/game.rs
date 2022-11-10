@@ -126,7 +126,7 @@ fn gen_track(
     rng: &mut ThreadRng,
     make_corner: bool,
 ) {
-    let lenght = rng.gen_range(3..12);
+    let lenght = rng.gen_range(3..=10);
 
     let mut dir = 1;
     if make_corner {
@@ -808,7 +808,7 @@ impl Game {
                 }
             }
 
-            renderer.draw_sprite_color(self.enemy.pos, &self.enemy.sprite, ENEMY_COLOR)
+            //renderer.draw_sprite_color(self.enemy.pos, &self.enemy.sprite, ENEMY_COLOR)
         }
     }
 }
